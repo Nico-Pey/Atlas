@@ -5,6 +5,7 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
@@ -25,13 +26,24 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
 # macOS
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# Windows (machine de dev principale)
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# éditeurs
+.vscode/
+.idea/
+
+# variables d'environnement (aucune n'est versionnée : tout est local à l'appareil)
+.env
+.env.*
 
 # typescript
 *.tsbuildinfo
