@@ -11,6 +11,36 @@ mais en Swift avec SwiftUI et SQLite.
 
 ---
 
+## Ton modèle : MacBook Air (mi-2013)
+
+Bonne nouvelle : c'est **le tout premier modèle de MacBook Air compatible avec
+macOS 11 Big Sur** (les MacBook Air antérieurs à 2013 n'y ont pas droit). Donc :
+
+- **macOS max : Big Sur (11.x)**
+- **Xcode max : 13.2.1**
+
+C'est nettement mieux que le plancher Catalina/Xcode 12 envisagé au départ —
+Xcode 13 gère tout le SwiftUI utilisé dans ce code sans problème.
+
+Mais deux nuances à vérifier avant de foncer :
+
+1. **Le Mac n'est peut-être pas déjà sur Big Sur.** Un Mac de cet âge, s'il n'a
+   jamais été mis à jour, peut très bien être resté sur une version bien plus
+   ancienne (Mojave, voire High Sierra). Il faut d'abord vérifier ce qui est
+   installé *maintenant* (étape 0 ci-dessous), et si besoin mettre à jour vers
+   Big Sur avant d'installer Xcode.
+2. **iOS 15.2, plafond de déploiement sur iPhone réel.** Xcode 13.2.1 sait
+   installer une app sur un iPhone jusqu'à iOS 15.2. Si ton iPhone tourne un
+   iOS plus récent (16/17/18 — probable si tu l'as depuis 2022 ou après), tu
+   seras **limité au simulateur** sur l'écran du Mac pour l'app native, sauf
+   bidouille (voir l'avertissement plus bas). Ça ne concerne pas la version
+   Expo, qui n'a pas cette contrainte.
+3. **RAM et disque** : les MacBook Air 2013 ont souvent 4 Go de RAM et un SSD
+   de 128 Go. Xcode fonctionne, mais lentement (compilation et simulateur
+   poussifs). Prévois de la patience, pas un problème bloquant.
+
+---
+
 ## Étape 0 — Savoir ce que ton Mac peut faire
 
 Tout dépend de la version de macOS installée : elle plafonne la version de
@@ -30,54 +60,54 @@ disque libre. Note les trois, ils décident de la suite.
 
 ## Étape 1 — Le verdict
 
-Version maximale de Xcode selon macOS (de mémoire, à confirmer par l'App Store
-qui ne te proposera de toute façon que ce qui est compatible) :
+Pour un MacBook Air mi-2013, la cible est connue : **Big Sur + Xcode 13.2.1**
+(voir la section ci-dessus). Le tableau suivant sert surtout de référence si
+le Mac s'avère être un autre modèle, ou pour situer où on se trouve après
+l'étape 0 :
 
 | macOS installé | Xcode max | Suffisant pour ce code ? |
 |---|---|---|
 | 10.13 High Sierra ou plus ancien | 10.1 | ❌ non |
 | 10.14 Mojave | 11.3.1 | ❌ non (pas de `@main` ni `@StateObject`) |
-| **10.15 Catalina** | **12.4** | ✅ oui, tout juste |
-| 11 Big Sur | 13.2.1 | ✅ oui |
-| 12 Monterey | 14.2 | ✅ oui |
-| 13 Ventura et au-delà | 15+ | ✅ oui, confortable |
+| 10.15 Catalina | 12.4 | ✅ oui, tout juste |
+| **11 Big Sur** | **13.2.1** | ✅ **c'est ton cas** |
+| 12 Monterey et au-delà | 14+ | ✅ oui (pas atteignable sur ce Mac) |
 
-Ce code vise **iOS 14 minimum**, volontairement bas pour maximiser tes chances.
+Ce code vise **iOS 14 minimum**, volontairement bas — donc largement dans les
+clous d'Xcode 13.2.1.
 
-**Règle de pouce sur le matériel** : un Mac de **2012 ou plus récent** peut
-généralement monter jusqu'à Catalina, donc suffit. Un Mac de 2011 ou avant est
-probablement hors-jeu.
-
-- ✅ **Ton Mac fait Catalina ou mieux** → continue à l'étape 2.
-- ❌ **Ton Mac est plus ancien** → dis-le-moi. Deux options : soit je réécris
-  le code pour iOS 13 (faisable, un peu moins élégant), soit tu restes sur la
-  version Expo, qui n'a pas ce problème du tout.
-
-⚠️ **Il y a un piège plus sérieux que la compilation, lis ça avant de tout
-télécharger** : pour installer l'app sur **ton iPhone réel**, il faut que Xcode
-connaisse la version d'iOS de ton iPhone. Xcode 12 (Catalina) ne sait déployer
-que jusqu'à iOS 14. Si ton iPhone est récent, un vieux Mac ne pourra donc
-**pas** installer l'app dessus — tu seras limité au **simulateur** sur l'écran
-du Mac. Il existe des bidouilles non officielles pour contourner ça, elles
-marchent une fois sur deux.
+⚠️ **Le piège n'est pas la compilation, c'est le déploiement sur iPhone réel**
+(déjà signalé plus haut) : Xcode 13.2.1 ne sait installer une app que jusqu'à
+iOS 15.2. Si ton iPhone tourne un iOS plus récent, tu seras limité au
+**simulateur** sur l'écran du Mac. Il existe des bidouilles non officielles
+(images de support d'appareil communautaires) pour contourner ça, elles
+marchent une fois sur deux et je ne les détaille pas ici — dis-le-moi si tu
+veux les tenter une fois rendu à cette étape.
 
 Autrement dit : si ton but est de faire Atlas **sur ton téléphone chaque
-matin**, la version Expo reste la seule voie fiable avec un vieux Mac. La
-version Swift est surtout intéressante pour apprendre le natif, ou si tu as un
-Mac récent. C'est une vraie différence, pas un détail.
+matin**, la version Expo reste la voie la plus sûre avec ce Mac. La version
+Swift est surtout intéressante pour apprendre le natif, ou utilisable pleinement
+si ton iPhone se trouve être sur iOS 15 ou moins (peu probable mais possible
+sur un vieux modèle jamais mis à jour).
 
 ---
 
 ## Étape 2 — Installer Xcode
 
-**App Store** (le plus simple) : cherche "Xcode", installe. L'App Store te
-proposera automatiquement la dernière version compatible avec ton macOS.
+Sur ce Mac, **l'App Store proposera très probablement une version de Xcode
+trop récente** pour Big Sur (l'App Store pousse la dernière version tout
+court, qui exige un macOS bien plus récent). Autant aller directement chercher
+la bonne version :
 
-Si l'App Store refuse en disant qu'il faut un macOS plus récent : va sur
-<https://developer.apple.com/download/all/>, connecte-toi avec un **Apple ID
-gratuit** (pas besoin du compte développeur à 99 €/an), cherche la version de
-Xcode du tableau ci-dessus, télécharge le `.xip`, double-clique pour l'extraire,
-puis glisse `Xcode.app` dans Applications.
+1. Va sur <https://developer.apple.com/download/all/>.
+2. Connecte-toi avec un **Apple ID gratuit** (pas besoin du compte développeur
+   à 99 €/an, juste un identifiant Apple classique).
+3. Cherche **Xcode 13.2.1**, télécharge le `.xip`.
+4. Double-clique pour l'extraire, puis glisse `Xcode.app` dans Applications.
+
+Essaie quand même l'App Store d'abord si tu préfères : ça ne coûte rien
+d'essayer, et si le Mac a été mis à jour au-delà de Big Sur entre-temps, il te
+proposera peut-être mieux que 13.2.1.
 
 À prévoir : **10 à 15 Go de téléchargement**, et il faut à peu près autant
 d'espace libre en plus pour l'extraction. Sur un vieux Mac avec un disque dur
