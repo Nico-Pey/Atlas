@@ -7,7 +7,27 @@ App iOS de géographie façon Anki/Duolingo, à faire chaque matin. Hiérarchie 
 préfectures. Seules les cartes vues en leçon apparaissent au quiz quotidien,
 qui utilise une répétition espacée simple.
 
-## Stack
+## Deux implémentations dans ce repo
+
+| | Où | État |
+|---|---|---|
+| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (39 vérifs) + 8 tests du moteur |
+| Expo / React Native | racine (`App.tsx`, `screens/`…) | compile, jamais lancée sur appareil |
+
+La **PWA est la voie retenue** : développement sous Windows, installation sur
+l'écran d'accueil de l'iPhone via Safari (« Sur l'écran d'accueil »), plein
+écran, hors-ligne, sans Mac ni compte développeur Apple ni expiration à 7 jours.
+Déploiement gratuit par GitHub Pages depuis `docs/` — voir `docs/README.md`.
+
+Une troisième version, native Swift/SwiftUI, existe sur la branche
+`claude/atlas-swift-native` (dossier `AtlasSwift/`) : écrite mais jamais
+compilée, abandonnée parce qu'un vieux Mac ne peut pas déployer sur un iPhone
+récent.
+
+Les trois partagent volontairement la **même règle SRS**, les **mêmes
+identifiants de cartes** et le **même contenu**.
+
+## Stack (version Expo)
 
 - **Expo (React Native) + TypeScript**, SDK 57. Développé sous Windows,
   testé via l'app **Expo Go** sur iPhone — pas de Mac, pas de compte

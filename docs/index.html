@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Atlas</title>
+
+    <!-- viewport-fit=cover : nécessaire pour que l'app occupe tout l'écran
+         sous l'encoche, et pour que env(safe-area-inset-*) fonctionne. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Réviser la géographie chaque matin, façon répétition espacée." />
+    <meta name="theme-color" content="#0A6E5C" />
+
+    <!-- Une fois ajoutée à l'écran d'accueil, l'app s'ouvre en plein écran,
+         sans la barre d'adresse de Safari. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Atlas" />
+
+    <!-- Chemins relatifs partout : l'app marche à la racine d'un domaine
+         comme dans un sous-dossier (GitHub Pages sert /Atlas/). -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+    <link rel="icon" href="./icons/icon-192.png" />
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+
+  <body>
+    <main id="screen"></main>
+    <nav id="tabs" class="tabs" aria-label="Navigation principale"></nav>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
