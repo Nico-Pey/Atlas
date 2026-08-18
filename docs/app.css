@@ -1,0 +1,382 @@
+/*
+ * Styles d'Atlas.
+ *
+ * Mêmes jetons que les autres versions du projet (voir
+ * .claude/skills/conventions-ui/SKILL.md) :
+ *  - app utilisée tôt le matin → contrastes francs, texte grand ;
+ *  - corps de texte à 17px minimum, cibles tactiles ≥ 44px ;
+ *  - thème clair uniquement en V1.
+ */
+
+:root {
+  --background: #ffffff;
+  --surface: #f2f2f7;
+  --text: #1c1c1e;
+  --text-muted: #5a5a5f;
+  --accent: #0a6e5c;
+  --success: #1e7a3c;
+  --danger: #b3261e;
+  --separator: #d1d1d6;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+
+  --radius-card: 16px;
+  --radius-button: 12px;
+  --touch-target: 44px;
+
+  /* Hauteur de la barre d'onglets, marge de sécurité de l'iPhone comprise. */
+  --tabs-height: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Un `display` défini par nos soins (flex, grid…) est plus spécifique que la
+   règle par défaut du navigateur pour [hidden], ce qui rendrait visible un
+   élément qu'on croit masqué. On rétablit la priorité une fois pour toutes. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+body {
+  /* Comportement d'app plutôt que de page web : pas de sélection de texte
+     accidentelle, pas de flash gris au tap, pas de rebond élastique. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  overscroll-behavior-y: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Structure ---------- */
+
+#screen {
+  /* Laisse la place à la barre d'onglets fixe. */
+  padding: var(--space-lg) var(--space-lg) calc(var(--tabs-height) + var(--space-lg));
+  padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px));
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.screen-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.center {
+  text-align: center;
+}
+
+/* ---------- Barre d'onglets ---------- */
+
+.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tabs-height);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--separator);
+}
+
+.tab {
+  flex: 1;
+  min-height: var(--touch-target);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+}
+
+.tab-active {
+  color: var(--accent);
+}
+
+.tab-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.tab-label {
+  font-size: 12px;
+}
+
+/* ---------- Accueil ---------- */
+
+.theme-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.theme-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.theme-description {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.lesson-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: calc(var(--touch-target) + var(--space-md));
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-card);
+  text-align: left;
+}
+
+.lesson-card-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.lesson-title {
+  font-weight: 600;
+}
+
+.lesson-subtitle {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.chevron {
+  font-size: 22px;
+  color: var(--text-muted);
+}
+
+.back-button {
+  align-self: flex-start;
+  min-height: var(--touch-target);
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---------- Carte interactive ---------- */
+
+.carte-slot {
+  display: flex;
+  justify-content: center;
+}
+
+/* On contraint la HAUTEUR plutôt que la largeur : la carte est plus haute que
+   large, et si on la laissait occuper toute la largeur de l'écran, elle
+   pousserait la flashcard et la légende hors de l'écran. */
+.carte {
+  height: min(40vh, 340px);
+  width: auto;
+  max-width: 100%;
+}
+
+.carte-departement {
+  cursor: pointer;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  justify-content: center;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--separator);
+}
+
+/* ---------- Flashcard ---------- */
+
+.flashcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.flashcard-face {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: 160px;
+  padding: var(--space-lg);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-card);
+  text-align: left;
+}
+
+.flashcard-label {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.flashcard-question {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.flashcard-separator {
+  height: 1px;
+  background: var(--separator);
+  margin: var(--space-sm) 0;
+}
+
+.flashcard-answer {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0;
+}
+
+.flashcard-hint {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: var(--space-sm) 0 0;
+}
+
+.flashcard-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.button {
+  flex: 1;
+  min-height: var(--touch-target);
+  border-radius: var(--radius-button);
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.button-failure {
+  background: var(--background);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.button-success {
+  background: var(--success);
+  color: #ffffff;
+}
+
+/* ---------- Quiz ---------- */
+
+.quiz-progress {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-md);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.empty-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ---------- Progression ---------- */
+
+.stats-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
+.stats-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.stats-total {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-sm);
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.stats-value {
+  font-weight: 600;
+}
+
+.reset-button {
+  min-height: var(--touch-target);
+  margin-top: var(--space-md);
+  background: none;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-button);
+  color: var(--text-muted);
+  font-size: 15px;
+}
