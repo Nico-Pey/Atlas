@@ -11,7 +11,7 @@
  * l'ancienne version depuis leur cache.
  */
 
-const CACHE_NAME = 'atlas-v1';
+const CACHE_NAME = 'atlas-v2';
 
 /** Chemins relatifs : fonctionne aussi bien à la racine que dans /Atlas/. */
 const ASSETS = [
@@ -24,6 +24,8 @@ const ASSETS = [
   './icons/icon-512.png',
   './js/app.js',
   './js/data/themes.js',
+  './js/data/geo.js',
+  './js/data/geo/nouvelle-aquitaine.json',
   './js/engine/date.js',
   './js/engine/srs.js',
   './js/storage/store.js',

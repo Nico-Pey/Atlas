@@ -11,7 +11,7 @@ qui utilise une répétition espacée simple.
 
 | | Où | État |
 |---|---|---|
-| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (39 vérifs) + 8 tests du moteur |
+| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (44 vérifs) + 8 tests du moteur. Vraies frontières des départements (IGN/INSEE). |
 | Expo / React Native | racine (`App.tsx`, `screens/`…) | compile, jamais lancée sur appareil |
 
 La **PWA est la voie retenue** : développement sous Windows, installation sur

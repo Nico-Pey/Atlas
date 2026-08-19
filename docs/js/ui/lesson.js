@@ -1,18 +1,24 @@
 /**
- * Écran de leçon : carte interactive + flashcard d'une région.
+ * Écran de leçon : carte interactive + fiche du département touché.
  *
  * Toucher un département marque immédiatement sa carte comme "vue" : c'est le
  * SEUL endroit de l'app qui fait entrer une carte dans le SRS, et donc dans le
  * pool du quiz (voir .claude/skills/moteur-srs/SKILL.md).
+ *
+ * Contrairement au Quiz, la leçon montre l'information directement (pas de
+ * "touchez pour révéler") : ici on apprend, on ne se teste pas. Le test caché
+ * reste dans js/ui/quiz.js, avec le même contenu (question/réponse).
  */
 
 import { findLesson } from '../data/themes.js';
 import { today } from '../engine/date.js';
+import { loadRegionGeo } from '../data/geo.js';
 import { getPool } from '../engine/srs.js';
 import { getAllProgress, markCardSeen } from '../storage/store.js';
 import { carteInteractive, OPACITY_BY_STATUS } from './carte.js';
 import { clear, el } from './dom.js';
-import { flashCard } from './flashcard.js';
+
+const POPULATION_FORMAT = new Intl.NumberFormat('fr-FR');
 
 /**
  * @param {string} lessonId
@@ -30,9 +36,13 @@ export function lessonScreen(lessonId, navigate) {
 
   /** @type {string | null} */
   let selectedMapId = null;
+  /** @type {import('../data/geo.js').RegionGeo | null} */
+  let geo = null;
 
-  const mapSlot = el('div', { class: 'carte-slot' });
-  const cardSlot = el('div', { class: 'flashcard-slot' });
+  const mapSlot = el('div', { class: 'carte-slot' }, [
+    el('p', { class: 'muted center', text: 'Chargement de la carte…' }),
+  ]);
+  const detailSlot = el('div', { class: 'detail-slot' });
 
   function statusByMapId() {
     const progressByCardId = new Map(getAllProgress().map((p) => [p.cardId, p]));
@@ -47,9 +57,11 @@ export function lessonScreen(lessonId, navigate) {
   }
 
   function renderMap() {
+    if (!geo) return;
     clear(mapSlot);
     mapSlot.appendChild(
       carteInteractive({
+        geo,
         status: statusByMapId(),
         selectedMapId,
         onSelect: handleSelect,
@@ -57,12 +69,11 @@ export function lessonScreen(lessonId, navigate) {
     );
   }
 
-  function renderCard() {
-    clear(cardSlot);
-    const card = lesson.cards.find((c) => c.mapId === selectedMapId);
+  function renderDetail() {
+    clear(detailSlot);
 
-    if (!card) {
-      cardSlot.appendChild(
+    if (!selectedMapId || !geo) {
+      detailSlot.appendChild(
         el('p', {
           class: 'muted center',
           text: "Touchez un département sur la carte pour l'apprendre.",
@@ -71,9 +82,37 @@ export function lessonScreen(lessonId, navigate) {
       return;
     }
 
-    cardSlot.appendChild(
-      flashCard({ question: card.question, answer: card.answer, label: lesson.title }),
+    const depGeo = geo.departements.find((d) => d.code === selectedMapId);
+    const card = lesson.cards.find((c) => c.mapId === selectedMapId);
+    if (!depGeo || !card) return;
+
+    detailSlot.appendChild(
+      el('div', { class: 'departement-detail' }, [
+        blasonSlot(depGeo),
+        el('div', { class: 'departement-detail-texts' }, [
+          el('p', { class: 'departement-detail-label', text: lesson.title }),
+          el('h2', { class: 'departement-detail-title', text: depGeo.nom }),
+          el('p', { class: 'departement-detail-prefecture' }, [
+            el('span', { class: 'departement-detail-prefecture-name', text: depGeo.prefecture.nom }),
+            el('span', { text: ' — préfecture' }),
+          ]),
+          el('p', {
+            class: 'muted',
+            text: `${POPULATION_FORMAT.format(depGeo.prefecture.population)} habitants`,
+          }),
+        ]),
+      ]),
     );
+  }
+
+  /** Espace réservé tant qu'aucun blason n'a été fourni (voir docs/README.md). */
+  function blasonSlot(depGeo) {
+    if (depGeo.blason) {
+      return el('img', { class: 'departement-blason', src: depGeo.blason, alt: `Blason de ${depGeo.nom}` });
+    }
+    return el('div', { class: 'departement-blason departement-blason-placeholder', 'aria-hidden': 'true' }, [
+      el('span', { text: depGeo.code }),
+    ]);
   }
 
   /** @param {string} mapId */
@@ -83,16 +122,29 @@ export function lessonScreen(lessonId, navigate) {
     if (card) markCardSeen(card.id, today());
 
     renderMap();
-    renderCard();
+    renderDetail();
 
-    // La flashcard est sous la carte, donc souvent hors écran sur un iPhone.
-    // On l'amène dans le champ de vision : sinon il faudrait scroller à chaque
+    // La fiche est sous la carte, donc souvent hors écran sur un iPhone. On
+    // l'amène dans le champ de vision : sinon il faudrait scroller à chaque
     // département touché, ce qui use vite quand on est à moitié réveillé.
-    cardSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    detailSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  renderMap();
-  renderCard();
+  loadRegionGeo(lessonId)
+    .then((loadedGeo) => {
+      geo = loadedGeo;
+      renderMap();
+      renderDetail();
+    })
+    .catch((error) => {
+      console.warn('Atlas : carte indisponible.', error);
+      clear(mapSlot);
+      mapSlot.appendChild(
+        el('p', { class: 'muted center', text: "La carte n'a pas pu être chargée. Vérifie ta connexion." }),
+      );
+    });
+
+  renderDetail();
 
   return el('section', { class: 'screen' }, [
     el('button', {
@@ -107,7 +159,8 @@ export function lessonScreen(lessonId, navigate) {
 
     mapSlot,
     legend(),
-    cardSlot,
+    el('p', { class: 'map-credit', text: 'Fond de carte : IGN / INSEE — Licence Ouverte' }),
+    detailSlot,
   ]);
 }
 

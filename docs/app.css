@@ -243,6 +243,76 @@ button {
   border: 1px solid var(--separator);
 }
 
+.map-credit {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: calc(-1 * var(--space-sm)) 0 0;
+}
+
+/* ---------- Fiche département (leçon) ---------- */
+
+.detail-slot {
+  min-height: 96px;
+}
+
+.departement-detail {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  padding: var(--space-lg);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
+.departement-blason {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.departement-blason-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--separator);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--background);
+}
+
+.departement-detail-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.departement-detail-label {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.departement-detail-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.departement-detail-prefecture {
+  margin: 0;
+  font-size: 17px;
+}
+
+.departement-detail-prefecture-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* ---------- Flashcard ---------- */
 
 .flashcard {
