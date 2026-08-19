@@ -8,8 +8,9 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-8 tests du moteur + 39 vérifications dans un navigateur simulant un iPhone
-(navigation, enregistrement de la progression, règles SRS, service worker).
+8 tests du moteur + 44 vérifications dans un navigateur simulant un iPhone
+(navigation, enregistrement de la progression, règles SRS, vraies frontières
+des départements, service worker).
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.
@@ -103,7 +104,62 @@ Quand tu modifies un fichier :
 
 ---
 
-## 6. Structure du code
+## 6. Vraies frontières, préfectures et blasons
+
+La carte affiche les **vraies frontières** des départements (pas des formes
+schématiques) et le point exact de chaque préfecture, avec sa population.
+
+**Source des tracés** : IGN / INSEE (Admin Express COG, millésime 2018), via
+le dépôt public [gregoiredavid/france-geojson](https://github.com/gregoiredavid/france-geojson)
+— Licence Ouverte / Open Licence, réutilisation libre avec attribution (voir
+le crédit affiché dans l'app). Les tracés bruts pèsent plusieurs Mo ; ils sont
+**simplifiés et pré-calculés** par `tools/build-geo.mjs` (algorithme de
+Douglas-Peucker) en un fichier léger (~40 Ko) commité dans le repo :
+`docs/js/data/geo/nouvelle-aquitaine.json`. L'app ne télécharge jamais les
+données brutes — seul ce script, lancé une fois par un développeur, le fait.
+
+Pour régénérer ce fichier (si les tracés changent, ou pour ajouter une
+nouvelle région) :
+
+```bash
+node tools/build-geo.mjs
+```
+
+Ajouter une région avec de vraies frontières :
+
+1. Dans `tools/build-geo.mjs`, dupliquer les constantes `DEPARTEMENTS_URL` /
+   `COMMUNES_URL` (adapter le nom de région dans l'URL france-geojson) et la
+   table `CHEF_LIEU_BY_DEPARTEMENT` (codes INSEE des préfectures — trouvables
+   dans `@etalab/decoupage-administratif`, sans avoir besoin de l'installer
+   comme dépendance du projet).
+2. Lancer le script : il écrit `docs/js/data/geo/<région>.json`.
+3. Ajouter la leçon dans `js/data/themes.js` avec le même `lessonId`.
+4. Ajouter le fichier généré à `ASSETS` dans `docs/sw.js`, et incrémenter
+   `CACHE_NAME`.
+
+### Blasons
+
+Chaque département a un champ `blason` dans le fichier généré, à `null` par
+défaut : l'app affiche alors un espace réservé (le code du département dans
+un cadre en pointillés) plutôt qu'une image cassée.
+
+Pour les ajouter :
+
+1. Télécharger le blason de chaque département (SVG de préférence) depuis
+   Wikimedia Commons — domaine public ou licence libre selon le blason,
+   vérifier la mention de licence sur la page de chaque fichier avant de
+   l'utiliser.
+2. Les enregistrer dans `docs/icons/blasons/<code>.svg` (ex : `33.svg`).
+3. Dans `docs/js/data/geo/nouvelle-aquitaine.json`, remplacer `"blason": null`
+   par `"blason": "./icons/blasons/33.svg"` pour chaque département — ou
+   modifier `tools/build-geo.mjs` pour le faire automatiquement au prochain
+   passage (une table `BLASON_BY_DEPARTEMENT` sur le même modèle que
+   `CHEF_LIEU_BY_DEPARTEMENT` suffit).
+4. Ajouter les fichiers à `ASSETS` dans `docs/sw.js`.
+
+---
+
+## 7. Structure du code
 
 ```
 docs/
@@ -114,18 +170,24 @@ docs/
   icons/          Icônes PNG (générées par tools/generate-icons.mjs).
   js/
     data/themes.js     Contenu figé : thèmes, leçons, cartes.
+    data/geo.js         Chargement paresseux des géométries régionales.
+    data/geo/*.json     Tracés simplifiés + préfectures (voir § 6 ci-dessus).
     engine/            Moteur SRS PUR : ni DOM, ni stockage, ni horloge.
     storage/store.js   Seul module qui touche au stockage du navigateur.
     ui/                Écrans et composants.
     app.js             Routage par ancre + barre d'onglets.
+tools/
+  build-geo.mjs        Génère docs/js/data/geo/*.json (voir § 6).
+  generate-icons.mjs   Génère docs/icons/*.png.
 ```
 
 Mêmes principes que les autres versions : la règle de répétition espacée
 n'existe qu'à un seul endroit (`js/engine/srs.js`, décrit dans
 `.claude/skills/moteur-srs/`), et les écrans ne connaissent aucune région en
-dur — ajouter une leçon se fait uniquement dans `js/data/themes.js`.
+dur — ajouter une leçon se fait uniquement dans `js/data/themes.js` (+ sa
+géométrie, voir § 6).
 
-## 7. Lancer les tests
+## 8. Lancer les tests
 
 ```bash
 node --test "tests/**/*.test.js"

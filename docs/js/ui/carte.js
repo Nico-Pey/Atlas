@@ -1,37 +1,17 @@
 /**
- * Carte cliquable d'une région, département par département.
+ * Carte cliquable d'une région, avec les vraies frontières des départements.
  *
- * IMPORTANT — simplification assumée : ce ne sont PAS les tracés géographiques
- * réels des départements. Aucune source de données cartographiques n'était
- * accessible pour cette V1. Chaque département est un rectangle arrondi placé
- * pour respecter grossièrement sa position relative réelle (nord/sud,
- * est/ouest) — assez pour que la carte soit lisible et cliquable, pas pour
- * représenter des frontières exactes.
+ * Les tracés viennent de docs/js/data/geo/<lessonId>.json, généré par
+ * tools/build-geo.mjs à partir des données IGN/INSEE (voir ce fichier et
+ * docs/README.md pour la source et la licence). Ce module ne fait que les
+ * afficher : aucune donnée géographique n'est calculée ici.
  *
- * Remplacer ça par de vrais tracés (des <path> SVG) ne demandera de toucher
- * QUE ce fichier : les écrans ne manipulent qu'un `mapId` (le code INSEE).
+ * Étendre à une nouvelle région = lancer le générateur pour cette région et
+ * lui donner le même mapId (code INSEE) que dans data/themes.js. Rien dans ce
+ * fichier n'est spécifique à la Nouvelle-Aquitaine.
  */
 
 import { svg } from './dom.js';
-
-const VIEW_BOX_WIDTH = 320;
-const VIEW_BOX_HEIGHT = 420;
-
-/** Positions approximatives des 12 départements de Nouvelle-Aquitaine. */
-const DEPARTMENTS = [
-  { mapId: '79', x: 90, y: 30, width: 70, height: 55 },   // Deux-Sèvres
-  { mapId: '86', x: 190, y: 20, width: 70, height: 60 },  // Vienne
-  { mapId: '23', x: 252, y: 70, width: 55, height: 55 },  // Creuse
-  { mapId: '17', x: 40, y: 110, width: 65, height: 70 },  // Charente-Maritime
-  { mapId: '16', x: 150, y: 110, width: 65, height: 60 }, // Charente
-  { mapId: '87', x: 242, y: 140, width: 60, height: 60 }, // Haute-Vienne
-  { mapId: '24', x: 176, y: 195, width: 75, height: 70 }, // Dordogne
-  { mapId: '19', x: 270, y: 210, width: 60, height: 65 }, // Corrèze
-  { mapId: '33', x: 60, y: 220, width: 90, height: 95 },  // Gironde
-  { mapId: '47', x: 190, y: 280, width: 65, height: 55 }, // Lot-et-Garonne
-  { mapId: '40', x: 70, y: 310, width: 75, height: 80 },  // Landes
-  { mapId: '64', x: 60, y: 390, width: 70, height: 55 },  // Pyrénées-Atlantiques
-];
 
 /**
  * Une seule teinte dont l'opacité augmente avec la maîtrise, plutôt qu'un code
@@ -47,70 +27,77 @@ export const OPACITY_BY_STATUS = {
 
 /**
  * @param {object} options
- * @param {Record<string, string>} options.status   Statut par mapId ('non_vue', 'nouvelle'…).
+ * @param {import('../data/geo.js').RegionGeo} options.geo   Géométrie chargée via loadRegionGeo.
+ * @param {Record<string, string>} options.status            Statut par mapId ('non_vue', 'nouvelle'…).
  * @param {string | null} options.selectedMapId
  * @param {(mapId: string) => void} options.onSelect
  * @returns {SVGElement}
  */
-export function carteInteractive({ status, selectedMapId, onSelect }) {
+export function carteInteractive({ geo, status, selectedMapId, onSelect }) {
   const root = svg('svg', {
-    viewBox: `0 0 ${VIEW_BOX_WIDTH} ${VIEW_BOX_HEIGHT}`,
+    viewBox: `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
     class: 'carte',
     role: 'group',
     'aria-label': 'Carte des départements',
   });
 
-  for (const dep of DEPARTMENTS) {
-    const depStatus = status[dep.mapId] ?? 'non_vue';
+  // Deux passes : d'abord tous les tracés, puis tous les points de préfecture
+  // par-dessus. Sinon le tracé d'un département voisin, dessiné après,
+  // recouvrirait le point d'un département déjà traité.
+  for (const dep of geo.departements) {
+    const depStatus = status[dep.code] ?? 'non_vue';
     const opacity = OPACITY_BY_STATUS[depStatus] ?? 0;
-    const isSelected = dep.mapId === selectedMapId;
+    const isSelected = dep.code === selectedMapId;
     const isUnseen = depStatus === 'non_vue';
 
-    // Fond neutre plein quand le département n'a jamais été vu : une opacité
-    // nulle sur la couleur d'accent laisserait voir le fond de la page.
     const group = svg('g', {
       class: 'carte-departement',
       role: 'button',
       tabindex: '0',
-      'aria-label': `Département ${dep.mapId}`,
+      'aria-label': `${dep.nom} (${dep.code})`,
     });
 
     group.appendChild(
-      svg('rect', {
-        x: dep.x - dep.width / 2,
-        y: dep.y - dep.height / 2,
-        width: dep.width,
-        height: dep.height,
-        rx: 10,
+      svg('path', {
+        d: dep.path,
+        // Fond neutre plein quand le département n'a jamais été vu : une
+        // opacité nulle sur la couleur d'accent laisserait voir le fond de
+        // la page.
         fill: isUnseen ? 'var(--surface)' : 'var(--accent)',
         'fill-opacity': isUnseen ? 1 : opacity,
         stroke: isSelected ? 'var(--accent)' : 'var(--separator)',
-        'stroke-width': isSelected ? 3 : 1,
+        'stroke-width': isSelected ? 2.5 : 1,
+        'stroke-linejoin': 'round',
       }),
     );
 
-    group.appendChild(
-      svg('text', {
-        x: dep.x,
-        y: dep.y + 4,
-        'font-size': 13,
-        'font-weight': '600',
-        // Texte blanc dès que le fond est assez foncé, sombre sinon.
-        fill: isUnseen ? 'var(--text-muted)' : opacity >= 0.55 ? '#FFFFFF' : 'var(--text)',
-        'text-anchor': 'middle',
-        text: dep.mapId,
-      }),
-    );
-
-    group.addEventListener('click', () => onSelect(dep.mapId));
+    group.addEventListener('click', () => onSelect(dep.code));
     group.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        onSelect(dep.mapId);
+        onSelect(dep.code);
       }
     });
 
     root.appendChild(group);
+  }
+
+  for (const dep of geo.departements) {
+    const depStatus = status[dep.code] ?? 'non_vue';
+    if (depStatus === 'non_vue') continue; // pas encore appris : pas de point à révéler
+
+    root.appendChild(
+      svg('circle', {
+        class: 'carte-prefecture',
+        cx: dep.prefecture.x,
+        cy: dep.prefecture.y,
+        r: dep.code === selectedMapId ? 4.5 : 3,
+        fill: '#ffffff',
+        stroke: 'var(--accent)',
+        'stroke-width': 1.5,
+        'pointer-events': 'none',
+      }),
+    );
   }
 
   return root;
