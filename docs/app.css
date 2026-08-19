@@ -208,13 +208,22 @@ button {
   justify-content: center;
 }
 
-/* On contraint la HAUTEUR plutôt que la largeur : la carte est plus haute que
-   large, et si on la laissait occuper toute la largeur de l'écran, elle
-   pousserait la flashcard et la légende hors de l'écran. */
+/* On contraint la HAUTEUR plutôt que la largeur : une carte (France ou
+   région) est généralement plus haute que large, et si on la laissait
+   occuper toute la largeur de l'écran, elle pousserait le reste de l'écran
+   hors du champ de vision. */
 .carte {
   height: min(40vh, 340px);
   width: auto;
   max-width: 100%;
+}
+
+.carte-region {
+  cursor: pointer;
+}
+
+.region-message {
+  min-height: 1.4em;
 }
 
 .carte-departement {
@@ -313,88 +322,72 @@ button {
   font-weight: 600;
 }
 
-/* ---------- Flashcard ---------- */
-
-.flashcard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.flashcard-face {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  width: 100%;
-  min-height: 160px;
-  padding: var(--space-lg);
-  background: var(--surface);
-  border: none;
-  border-radius: var(--radius-card);
-  text-align: left;
-}
-
-.flashcard-label {
-  font-size: 15px;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.flashcard-question {
-  font-size: 26px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.flashcard-separator {
-  height: 1px;
-  background: var(--separator);
-  margin: var(--space-sm) 0;
-}
-
-.flashcard-answer {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--accent);
-  margin: 0;
-}
-
-.flashcard-hint {
-  font-size: 15px;
-  color: var(--text-muted);
-  margin: var(--space-sm) 0 0;
-}
-
-.flashcard-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.button {
-  flex: 1;
-  min-height: var(--touch-target);
-  border-radius: var(--radius-button);
-  font-weight: 600;
-  border: 1px solid transparent;
-}
-
-.button-failure {
-  background: var(--background);
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.button-success {
-  background: var(--success);
-  color: #ffffff;
-}
-
-/* ---------- Quiz ---------- */
+/* ---------- Quiz (silhouette + choix multiples) ---------- */
 
 .quiz-progress {
   font-size: 15px;
   color: var(--text-muted);
   margin: 0 0 var(--space-md);
+}
+
+.quiz-round {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.quiz-step-label {
+  font-size: 17px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+.quiz-question {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+}
+
+/* La silhouette ne doit donner aucun indice de couleur : elle occupe une
+   zone de taille fixe, cadrée sur le seul département à deviner (voir
+   js/ui/carte.js § silhouette). */
+.silhouette {
+  width: 100%;
+  max-width: 220px;
+  height: 200px;
+}
+
+.quiz-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.choice-button {
+  min-height: calc(var(--touch-target) + var(--space-sm));
+  padding: var(--space-sm);
+  background: var(--surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-button);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.choice-correct {
+  background: var(--background);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.choice-wrong {
+  background: var(--background);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .empty-state {

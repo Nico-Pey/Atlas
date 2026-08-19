@@ -11,7 +11,7 @@ qui utilise une répétition espacée simple.
 
 | | Où | État |
 |---|---|---|
-| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (44 vérifs) + 8 tests du moteur. Vraies frontières des départements (IGN/INSEE). |
+| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (50+ vérifs) + 8 tests du moteur. Carte de France (régions) à l'accueil, zoom sur les départements, quiz à choix multiples. |
 | Expo / React Native | racine (`App.tsx`, `screens/`…) | compile, jamais lancée sur appareil |
 
 La **PWA est la voie retenue** : développement sous Windows, installation sur

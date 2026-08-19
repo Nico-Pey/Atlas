@@ -1,21 +1,22 @@
 /**
- * Écran de leçon : carte interactive + fiche du département touché.
+ * Écran de leçon : carte de la région (zoomée depuis la carte de France) +
+ * fiche du département touché.
  *
  * Toucher un département marque immédiatement sa carte comme "vue" : c'est le
  * SEUL endroit de l'app qui fait entrer une carte dans le SRS, et donc dans le
  * pool du quiz (voir .claude/skills/moteur-srs/SKILL.md).
  *
  * Contrairement au Quiz, la leçon montre l'information directement (pas de
- * "touchez pour révéler") : ici on apprend, on ne se teste pas. Le test caché
- * reste dans js/ui/quiz.js, avec le même contenu (question/réponse).
+ * choix à faire) : ici on apprend, on ne se teste pas. Le test à choix
+ * multiples reste dans js/ui/quiz.js, avec le même contenu (question/réponse).
  */
 
 import { findLesson } from '../data/themes.js';
 import { today } from '../engine/date.js';
-import { loadRegionGeo } from '../data/geo.js';
+import { loadFranceGeo } from '../data/geo.js';
 import { getPool } from '../engine/srs.js';
 import { getAllProgress, markCardSeen } from '../storage/store.js';
-import { carteInteractive, OPACITY_BY_STATUS } from './carte.js';
+import { carteDepartements, OPACITY_BY_STATUS } from './carte.js';
 import { clear, el } from './dom.js';
 
 const POPULATION_FORMAT = new Intl.NumberFormat('fr-FR');
@@ -28,7 +29,7 @@ const POPULATION_FORMAT = new Intl.NumberFormat('fr-FR');
 export function lessonScreen(lessonId, navigate) {
   const lesson = findLesson(lessonId);
 
-  if (!lesson) {
+  if (!lesson || !lesson.regionCode) {
     return el('section', { class: 'screen' }, [
       el('p', { class: 'muted', text: 'Leçon introuvable.' }),
     ]);
@@ -36,7 +37,7 @@ export function lessonScreen(lessonId, navigate) {
 
   /** @type {string | null} */
   let selectedMapId = null;
-  /** @type {import('../data/geo.js').RegionGeo | null} */
+  /** @type {import('../data/geo.js').FranceGeo | null} */
   let geo = null;
 
   const mapSlot = el('div', { class: 'carte-slot' }, [
@@ -60,8 +61,9 @@ export function lessonScreen(lessonId, navigate) {
     if (!geo) return;
     clear(mapSlot);
     mapSlot.appendChild(
-      carteInteractive({
+      carteDepartements({
         geo,
+        regionCode: lesson.regionCode,
         status: statusByMapId(),
         selectedMapId,
         onSelect: handleSelect,
@@ -84,7 +86,7 @@ export function lessonScreen(lessonId, navigate) {
 
     const depGeo = geo.departements.find((d) => d.code === selectedMapId);
     const card = lesson.cards.find((c) => c.mapId === selectedMapId);
-    if (!depGeo || !card) return;
+    if (!depGeo || !card || !depGeo.prefecture) return;
 
     detailSlot.appendChild(
       el('div', { class: 'departement-detail' }, [
@@ -107,8 +109,12 @@ export function lessonScreen(lessonId, navigate) {
 
   /** Espace réservé tant qu'aucun blason n'a été fourni (voir docs/README.md). */
   function blasonSlot(depGeo) {
-    if (depGeo.blason) {
-      return el('img', { class: 'departement-blason', src: depGeo.blason, alt: `Blason de ${depGeo.nom}` });
+    if (depGeo.prefecture.blason) {
+      return el('img', {
+        class: 'departement-blason',
+        src: depGeo.prefecture.blason,
+        alt: `Blason de ${depGeo.nom}`,
+      });
     }
     return el('div', { class: 'departement-blason departement-blason-placeholder', 'aria-hidden': 'true' }, [
       el('span', { text: depGeo.code }),
@@ -130,7 +136,7 @@ export function lessonScreen(lessonId, navigate) {
     detailSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  loadRegionGeo(lessonId)
+  loadFranceGeo()
     .then((loadedGeo) => {
       geo = loadedGeo;
       renderMap();
@@ -150,7 +156,7 @@ export function lessonScreen(lessonId, navigate) {
     el('button', {
       class: 'back-button',
       type: 'button',
-      text: '‹ Thèmes',
+      text: '‹ France',
       onClick: () => navigate('#/'),
     }),
 

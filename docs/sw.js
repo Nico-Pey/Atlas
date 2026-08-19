@@ -11,7 +11,7 @@
  * l'ancienne version depuis leur cache.
  */
 
-const CACHE_NAME = 'atlas-v2';
+const CACHE_NAME = 'atlas-v3';
 
 /** Chemins relatifs : fonctionne aussi bien à la racine que dans /Atlas/. */
 const ASSETS = [
@@ -25,13 +25,12 @@ const ASSETS = [
   './js/app.js',
   './js/data/themes.js',
   './js/data/geo.js',
-  './js/data/geo/nouvelle-aquitaine.json',
+  './js/data/geo/france.json',
   './js/engine/date.js',
   './js/engine/srs.js',
   './js/storage/store.js',
   './js/ui/carte.js',
   './js/ui/dom.js',
-  './js/ui/flashcard.js',
   './js/ui/home.js',
   './js/ui/lesson.js',
   './js/ui/progress.js',
