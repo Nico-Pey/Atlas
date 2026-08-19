@@ -1,0 +1,9 @@
+{
+  "name": "atlas-tools",
+  "private": true,
+  "description": "Dépendances des scripts de build ponctuels (tools/*.mjs). Jamais expédiées dans docs/ — isolées ici pour ne pas polluer le package.json du projet Expo à la racine.",
+  "type": "module",
+  "dependencies": {
+    "@etalab/decoupage-administratif": "^6.0.0"
+  }
+}

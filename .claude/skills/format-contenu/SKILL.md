@@ -41,6 +41,11 @@ Theme "Départements"
 - `Lesson.id` : slug de la région, en minuscules, tirets pour les espaces.
   Ex. `"nouvelle-aquitaine"`.
 - `Theme.id` : slug court du thème. Ex. `"departements"`.
+- `Lesson.regionCode` (PWA uniquement pour l'instant, `docs/js/data/themes.js`) :
+  code INSEE de la région, ex. `"75"` pour Nouvelle-Aquitaine. C'est ce qui
+  relie une leçon à sa région sur la carte de France de l'accueil (voir
+  `docs/README.md` § 6) — une leçon sans `regionCode` n'apparaît pas comme
+  cliquable sur cette carte.
 
 ## Exemple complet (extrait à 2 départements — le fichier réel en a 12)
 

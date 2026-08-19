@@ -19,6 +19,9 @@
  * @property {string} id
  * @property {string} title
  * @property {string} [subtitle]
+ * @property {string} [regionCode]  Code INSEE de la région (relie la leçon à
+ *           sa forme sur la carte de France — voir js/data/geo.js). Une leçon
+ *           sans regionCode n'est pas accessible depuis la carte nationale.
  * @property {Card[]} cards
  *
  * @typedef {object} Theme
@@ -39,6 +42,7 @@ export const themes = [
         id: 'nouvelle-aquitaine',
         title: 'Nouvelle-Aquitaine',
         subtitle: '12 départements',
+        regionCode: '75',
         cards: [
           { id: 'dep-16-prefecture', question: 'Quelle est la préfecture de la Charente ?', answer: 'Angoulême', mapId: '16' },
           { id: 'dep-17-prefecture', question: 'Quelle est la préfecture de la Charente-Maritime ?', answer: 'La Rochelle', mapId: '17' },
@@ -71,4 +75,22 @@ export function findLesson(lessonId) {
 /** @param {string} cardId @returns {Card | undefined} */
 export function findCard(cardId) {
   return allCards().find((card) => card.id === cardId);
+}
+
+/**
+ * Retrouve la leçon à laquelle appartient une carte. Utilisé par le quiz
+ * pour piocher des propositions plausibles (d'autres cartes de la même
+ * leçon) sans connaître de région en dur.
+ * @param {string} cardId
+ * @returns {Lesson | undefined}
+ */
+export function findLessonByCardId(cardId) {
+  return themes
+    .flatMap((theme) => theme.lessons)
+    .find((lesson) => lesson.cards.some((card) => card.id === cardId));
+}
+
+/** @param {string} regionCode @returns {Lesson | undefined} */
+export function findLessonByRegionCode(regionCode) {
+  return themes.flatMap((theme) => theme.lessons).find((lesson) => lesson.regionCode === regionCode);
 }

@@ -8,9 +8,14 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-8 tests du moteur + 44 vérifications dans un navigateur simulant un iPhone
-(navigation, enregistrement de la progression, règles SRS, vraies frontières
-des départements, service worker).
+8 tests du moteur + une cinquantaine de vérifications dans un navigateur
+simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
+vraies frontières régions/départements, quiz à choix multiples, service
+worker).
+
+L'accueil affiche la carte de France (régions) ; toucher une région zoome sur
+ses départements. Le quiz se joue en deux temps : deviner le département à
+son seul contour, puis sa préfecture, chacun parmi 4 propositions.
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.
@@ -106,40 +111,52 @@ Quand tu modifies un fichier :
 
 ## 6. Vraies frontières, préfectures et blasons
 
-La carte affiche les **vraies frontières** des départements (pas des formes
-schématiques) et le point exact de chaque préfecture, avec sa population.
+La carte de France (accueil) et celle de chaque région (leçon) affichent les
+**vraies frontières** — régions et départements — dans un seul et même
+repère : passer de l'une à l'autre ne fait que changer le cadrage (viewBox)
+du SVG, sans rien recalculer. Chaque département a aussi le point exact de sa
+préfecture une fois appris, avec sa population.
 
-**Source des tracés** : IGN / INSEE (Admin Express COG, millésime 2018), via
-le dépôt public [gregoiredavid/france-geojson](https://github.com/gregoiredavid/france-geojson)
+**Source des tracés** : IGN / INSEE (Admin Express COG), via le dépôt public
+[gregoiredavid/france-geojson](https://github.com/gregoiredavid/france-geojson)
 — Licence Ouverte / Open Licence, réutilisation libre avec attribution (voir
-le crédit affiché dans l'app). Les tracés bruts pèsent plusieurs Mo ; ils sont
-**simplifiés et pré-calculés** par `tools/build-geo.mjs` (algorithme de
-Douglas-Peucker) en un fichier léger (~40 Ko) commité dans le repo :
-`docs/js/data/geo/nouvelle-aquitaine.json`. L'app ne télécharge jamais les
-données brutes — seul ce script, lancé une fois par un développeur, le fait.
+le crédit affiché dans l'app). On utilise directement les fichiers **déjà
+simplifiés** par ce dépôt (`regions-version-simplifiee.geojson`,
+`departements-version-simplifiee.geojson`) : pas de resimplification maison,
+ce travail est déjà fait et publié. `tools/build-geo.mjs` les reprojette dans
+un repère commun et les réduit à un format compact (chemins SVG déjà
+projetés, arrondis à une décimale) en un seul fichier commité dans le repo :
+`docs/js/data/geo/france.json` (~230 Ko, régions + les 96 départements
+métropolitains). L'app ne télécharge jamais les fichiers sources — seul ce
+script, lancé une fois par un développeur, le fait.
 
-Pour régénérer ce fichier (si les tracés changent, ou pour ajouter une
-nouvelle région) :
+Le script a une dépendance de build (jamais expédiée dans `docs/`), isolée
+dans `tools/` pour ne pas polluer le `package.json` du projet Expo à la
+racine :
 
 ```bash
-node tools/build-geo.mjs
+cd tools && npm install   # une seule fois
+cd ..
+node tools/build-geo.mjs  # à chaque fois que les tracés ou le contenu changent
 ```
 
-Ajouter une région avec de vraies frontières :
+Ajouter une région avec du contenu (départements, préfectures) :
 
-1. Dans `tools/build-geo.mjs`, dupliquer les constantes `DEPARTEMENTS_URL` /
-   `COMMUNES_URL` (adapter le nom de région dans l'URL france-geojson) et la
-   table `CHEF_LIEU_BY_DEPARTEMENT` (codes INSEE des préfectures — trouvables
-   dans `@etalab/decoupage-administratif`, sans avoir besoin de l'installer
-   comme dépendance du projet).
-2. Lancer le script : il écrit `docs/js/data/geo/<région>.json`.
-3. Ajouter la leçon dans `js/data/themes.js` avec le même `lessonId`.
-4. Ajouter le fichier généré à `ASSETS` dans `docs/sw.js`, et incrémenter
-   `CACHE_NAME`.
+1. Dans `tools/build-geo.mjs`, ajouter les codes INSEE des communes
+   chef-lieu de ses départements à `CHEF_LIEU_BY_DEPARTEMENT`, et leur
+   population à `POPULATION_BY_DEPARTEMENT` (trouvables via
+   `@etalab/decoupage-administratif`, déjà installé dans `tools/`). La forme
+   géographique, elle, est **déjà présente** dans `france.json` pour les 96
+   départements — aucune donnée cartographique à ajouter.
+2. Relancer `node tools/build-geo.mjs`.
+3. Ajouter la leçon dans `js/data/themes.js` avec `regionCode` = le code
+   INSEE de la région (voir `.claude/skills/format-contenu/`).
+4. Rien d'autre : l'accueil, la carte de la leçon et le quiz lisent tous
+   `france.json` + `data/themes.js` dynamiquement.
 
 ### Blasons
 
-Chaque département a un champ `blason` dans le fichier généré, à `null` par
+Chaque préfecture a un champ `blason` dans le fichier généré, à `null` par
 défaut : l'app affiche alors un espace réservé (le code du département dans
 un cadre en pointillés) plutôt qu'une image cassée.
 
@@ -150,12 +167,11 @@ Pour les ajouter :
    vérifier la mention de licence sur la page de chaque fichier avant de
    l'utiliser.
 2. Les enregistrer dans `docs/icons/blasons/<code>.svg` (ex : `33.svg`).
-3. Dans `docs/js/data/geo/nouvelle-aquitaine.json`, remplacer `"blason": null`
-   par `"blason": "./icons/blasons/33.svg"` pour chaque département — ou
-   modifier `tools/build-geo.mjs` pour le faire automatiquement au prochain
-   passage (une table `BLASON_BY_DEPARTEMENT` sur le même modèle que
-   `CHEF_LIEU_BY_DEPARTEMENT` suffit).
-4. Ajouter les fichiers à `ASSETS` dans `docs/sw.js`.
+3. Dans `tools/build-geo.mjs`, ajouter une table `BLASON_BY_DEPARTEMENT` sur
+   le modèle de `CHEF_LIEU_BY_DEPARTEMENT`, l'utiliser dans `prefectureFor()`
+   pour remplir le champ `blason`, puis relancer le script.
+4. Ajouter les fichiers à `ASSETS` dans `docs/sw.js`, et incrémenter
+   `CACHE_NAME`.
 
 ---
 
@@ -170,22 +186,30 @@ docs/
   icons/          Icônes PNG (générées par tools/generate-icons.mjs).
   js/
     data/themes.js     Contenu figé : thèmes, leçons, cartes.
-    data/geo.js         Chargement paresseux des géométries régionales.
-    data/geo/*.json     Tracés simplifiés + préfectures (voir § 6 ci-dessus).
+    data/geo.js         Chargement paresseux de la géométrie de France.
+    data/geo/france.json  Régions + départements, un seul repère (voir § 6).
     engine/            Moteur SRS PUR : ni DOM, ni stockage, ni horloge.
     storage/store.js   Seul module qui touche au stockage du navigateur.
-    ui/                Écrans et composants.
+    ui/
+      carte.js           Rendus cartographiques (France, région, silhouette).
+      home.js            Accueil : carte de France, une région = un point d'entrée.
+      lesson.js          Leçon : carte d'une région + fiche département.
+      quiz.js             Quiz : silhouette puis préfecture, à choix multiples.
+      progress.js         Statistiques de progression.
+      dom.js              Micro-outils de construction d'éléments HTML/SVG.
     app.js             Routage par ancre + barre d'onglets.
 tools/
-  build-geo.mjs        Génère docs/js/data/geo/*.json (voir § 6).
+  package.json         Dépendance de build isolée (@etalab/decoupage-administratif),
+                        jamais expédiée dans docs/ — voir § 6.
+  build-geo.mjs        Génère docs/js/data/geo/france.json (voir § 6).
   generate-icons.mjs   Génère docs/icons/*.png.
 ```
 
 Mêmes principes que les autres versions : la règle de répétition espacée
 n'existe qu'à un seul endroit (`js/engine/srs.js`, décrit dans
 `.claude/skills/moteur-srs/`), et les écrans ne connaissent aucune région en
-dur — ajouter une leçon se fait uniquement dans `js/data/themes.js` (+ sa
-géométrie, voir § 6).
+dur — ajouter une leçon se fait uniquement dans `js/data/themes.js` (+ son
+contenu géographique, voir § 6).
 
 ## 8. Lancer les tests
 
