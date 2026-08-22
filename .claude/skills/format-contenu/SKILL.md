@@ -5,10 +5,21 @@ description: Structure exacte d'un thème/leçon/carte dans Atlas, avec un exemp
 
 # Format du contenu (thème → leçon → carte)
 
-Le contenu pédagogique d'Atlas est **du TypeScript typé**, pas du JSON brut
-importé au runtime : on garde la vérification de type au moment d'écrire le
-contenu, ça évite une faute de frappe silencieuse dans un id. Les types de
-référence sont dans `data/types.ts` — ce skill explique comment les remplir.
+Le contenu pédagogique d'Atlas est **du TypeScript (ou JS) typé**, pas du
+JSON brut importé au runtime : on garde la vérification de type au moment
+d'écrire le contenu, ça évite une faute de frappe silencieuse dans un id.
+Les types de référence sont dans `data/types.ts` (Expo) — ce skill explique
+comment les remplir.
+
+⚠️ **Dans la version PWA (`docs/`), le thème "departements" est GÉNÉRÉ**
+(`docs/js/data/themes.js`, par `tools/build-content.mjs` — voir
+`docs/README.md` § 6), parce que ses 96 questions sont mécaniques et
+identiques ("Quelle est la préfecture du département « X » ?"). Ne pas
+éditer ses leçons à la main, elles seraient écrasées au prochain lancement
+du script. La checklist "Ajouter une nouvelle région" ci-dessous s'applique
+telle quelle à la version **Expo**, et à tout **nouveau thème** de la PWA qui
+ne suit pas ce modèle mécanique (questions rédigées à la main) — celui-là
+reste un `Theme` séparé, écrit à la main.
 
 ## Hiérarchie
 
