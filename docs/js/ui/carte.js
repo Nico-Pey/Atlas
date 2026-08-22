@@ -121,7 +121,6 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
   for (const dep of departements) {
     const depStatus = status[dep.code] ?? 'non_vue';
     const opacity = OPACITY_BY_STATUS[depStatus] ?? 0;
-    const isSelected = dep.code === selectedMapId;
     const isUnseen = depStatus === 'non_vue';
 
     const group = svg('g', {
@@ -140,8 +139,17 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
         // la page.
         fill: isUnseen ? 'var(--surface)' : 'var(--accent)',
         'fill-opacity': isUnseen ? 1 : opacity,
-        stroke: isSelected ? 'var(--accent)' : 'var(--separator)',
-        'stroke-width': isSelected ? 2.5 : 1,
+        // Contour toujours fin et neutre ici, même pour le département
+        // sélectionné : deux départements voisins partagent une frontière,
+        // et celui dessiné en dernier peint son trait par-dessus celui de
+        // l'autre à cet endroit. Avec un trait spécial par département, la
+        // mise en évidence de la sélection ne "gagnait" que sur les bords
+        // où elle se trouvait dessinée après son voisin — contour à moitié
+        // épais, à moitié fin selon l'ordre, pas selon la sélection. Le
+        // contour complet du département sélectionné est redessiné une
+        // seule fois, par-dessus tout le reste, juste après cette boucle.
+        stroke: 'var(--separator)',
+        'stroke-width': 1,
         'stroke-linejoin': 'round',
       }),
     );
@@ -175,6 +183,24 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
     const nearest = nearestDepartement(departements, point);
     if (nearest) onSelect(nearest.code);
   });
+
+  // Contour du département sélectionné, redessiné par-dessus tout le reste
+  // (voir le commentaire dans la boucle ci-dessus). `pointer-events: none`
+  // pour que ce tracé purement décoratif ne vole pas les clics au groupe
+  // cliquable qu'il recouvre.
+  const selectedDep = departements.find((d) => d.code === selectedMapId);
+  if (selectedDep) {
+    root.appendChild(
+      svg('path', {
+        d: selectedDep.path,
+        fill: 'none',
+        stroke: 'var(--accent)',
+        'stroke-width': 2.5,
+        'stroke-linejoin': 'round',
+        'pointer-events': 'none',
+      }),
+    );
+  }
 
   for (const dep of departements) {
     const depStatus = status[dep.code] ?? 'non_vue';
