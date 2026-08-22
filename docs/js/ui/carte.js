@@ -206,21 +206,50 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
     const depStatus = status[dep.code] ?? 'non_vue';
     if (depStatus === 'non_vue' || !dep.prefecture) continue; // pas encore appris : pas de point à révéler
 
+    const radius = prefectureMarkerRadius(dep, dep.code === selectedMapId);
+
     root.appendChild(
       svg('circle', {
         class: 'carte-prefecture',
         cx: dep.prefecture.x,
         cy: dep.prefecture.y,
-        r: dep.code === selectedMapId ? 4.5 : 3,
+        r: radius,
         fill: '#ffffff',
         stroke: 'var(--accent)',
-        'stroke-width': 1.5,
+        // Un trait fin proportionné au cercle : à ce rayon, 1.5 (la valeur
+        // fixe d'avant) ferait un anneau épais et grossier.
+        'stroke-width': Math.max(radius * 0.35, 0.6),
         'pointer-events': 'none',
       }),
     );
   }
 
   return root;
+}
+
+/** Rayons min/max (unités de viewBox) du point de préfecture. */
+const PREFECTURE_MARKER_MIN_RADIUS = 0.9;
+const PREFECTURE_MARKER_MAX_RADIUS = 3;
+/** Multiplicateur appliqué au rayon du département sélectionné. */
+const PREFECTURE_MARKER_SELECTED_FACTOR = 1.4;
+
+/**
+ * Rayon du point de préfecture, proportionné à la taille du département —
+ * un rayon fixe engloutissait complètement les petits départements (Paris
+ * ne fait que ~3.4 unités de haut ; un rayon fixe de 3, soit un diamètre de
+ * 6, dépassait sa propre forme). On le limite à une fraction de sa plus
+ * petite dimension, borné pour rester visible sur un très petit département
+ * et raisonnable sur un très grand.
+ */
+function prefectureMarkerRadius(dep, isSelected) {
+  const [minX, minY, maxX, maxY] = dep.bbox;
+  const smallestSide = Math.min(maxX - minX, maxY - minY);
+  const radius = clamp(smallestSide * 0.22, PREFECTURE_MARKER_MIN_RADIUS, PREFECTURE_MARKER_MAX_RADIUS);
+  return isSelected ? Math.min(radius * PREFECTURE_MARKER_SELECTED_FACTOR, PREFECTURE_MARKER_MAX_RADIUS * PREFECTURE_MARKER_SELECTED_FACTOR) : radius;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 /** Coordonnées d'un clic écran, converties dans le repère du viewBox du SVG. */
