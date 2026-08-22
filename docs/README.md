@@ -1,21 +1,24 @@
 # Atlas — version web installable (PWA)
 
-Même app qu'ailleurs dans le repo (Thème → Leçon → Carte, répétition espacée,
-Nouvelle-Aquitaine), mais en **application web installable** : elle s'ajoute à
-l'écran d'accueil de l'iPhone avec une icône, s'ouvre en plein écran sans barre
+Même app qu'ailleurs dans le repo (Thème → Leçon → Carte, répétition
+espacée), mais en **application web installable** : elle s'ajoute à l'écran
+d'accueil de l'iPhone avec une icône, s'ouvre en plein écran sans barre
 Safari, et fonctionne sans connexion.
 
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-8 tests du moteur + une cinquantaine de vérifications dans un navigateur
+8 tests du moteur + une soixantaine de vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
-vraies frontières régions/départements, quiz à choix multiples, service
-worker).
+vraies frontières régions/départements, quiz à choix multiples, mise en cache
+progressive, service worker).
 
-L'accueil affiche la carte de France (régions) ; toucher une région zoome sur
-ses départements. Le quiz se joue en deux temps : deviner le département à
-son seul contour, puis sa préfecture, chacun parmi 4 propositions.
+L'accueil affiche la carte de France (13 régions, toutes cliquables) ; toucher
+une région zoome sur ses départements. **Les 96 départements métropolitains
+ont du contenu** (question/réponse sur leur préfecture — voir § 6, comment
+c'est généré). Le quiz se joue en deux temps : deviner le département à son
+seul contour, puis sa préfecture, chacun parmi jusqu'à 4 propositions (moins
+pour une région qui a peu de départements, comme la Corse).
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.
@@ -109,13 +112,21 @@ Quand tu modifies un fichier :
 
 ---
 
-## 6. Vraies frontières, préfectures et blasons
+## 6. Vraies frontières, contenu généré et blasons
 
 La carte de France (accueil) et celle de chaque région (leçon) affichent les
 **vraies frontières** — régions et départements — dans un seul et même
 repère : passer de l'une à l'autre ne fait que changer le cadrage (viewBox)
-du SVG, sans rien recalculer. Chaque département a aussi le point exact de sa
-préfecture une fois appris, avec sa population.
+du SVG, sans rien recalculer. **Les 13 régions et 96 départements
+métropolitains ont du contenu** (question/réponse sur leur préfecture),
+généré par deux scripts à lancer dans l'ordre :
+
+```bash
+cd tools && npm install         # une seule fois
+cd ..
+node tools/build-geo.mjs        # géométrie + préfectures (source officielle)
+node tools/build-content.mjs    # questions/réponses, dérivées du fichier ci-dessus
+```
 
 **Source des tracés** : IGN / INSEE (Admin Express COG), via le dépôt public
 [gregoiredavid/france-geojson](https://github.com/gregoiredavid/france-geojson)
@@ -126,52 +137,55 @@ simplifiés** par ce dépôt (`regions-version-simplifiee.geojson`,
 ce travail est déjà fait et publié. `tools/build-geo.mjs` les reprojette dans
 un repère commun et les réduit à un format compact (chemins SVG déjà
 projetés, arrondis à une décimale) en un seul fichier commité dans le repo :
-`docs/js/data/geo/france.json` (~230 Ko, régions + les 96 départements
-métropolitains). L'app ne télécharge jamais les fichiers sources — seul ce
+`docs/js/data/geo/france.json` (~240 Ko, régions + les 96 départements, avec
+la position et la population de chaque préfecture). L'app ne télécharge
+jamais les fichiers sources (plusieurs dizaines de Mo à eux tous) — seul ce
 script, lancé une fois par un développeur, le fait.
 
-Le script a une dépendance de build (jamais expédiée dans `docs/`), isolée
-dans `tools/` pour ne pas polluer le `package.json` du projet Expo à la
-racine :
+**`tools/build-content.mjs`** lit ce fichier et écrit `docs/js/data/themes.js`
+(13 leçons, 96 cartes) : une question mécanique et identique pour chaque
+département ("Quelle est la préfecture du département « X » ?"). Ce fichier
+est donc **généré** — le dire clairement en tête du fichier évite qu'un futur
+éditeur modifie une leçon à la main et perde son changement au prochain
+lancement du script. Un contenu qui ne suit pas ce modèle mécanique (des
+questions rédigées à la main, un autre type de thème) doit vivre dans un
+`Theme` séparé, celui-là édité directement.
 
-```bash
-cd tools && npm install   # une seule fois
-cd ..
-node tools/build-geo.mjs  # à chaque fois que les tracés ou le contenu changent
-```
+Pourquoi une question sans article ("« X »" plutôt que "de la/du/des X") :
+le français exige un accord de genre et de nombre sur les noms de
+départements qui a de vraies exceptions (le Rhône malgré le "e", les Landes
+au pluriel, les Bouches-du-Rhône…). Deviner cet accord pour 96 noms est le
+genre d'erreur qui passe inaperçue à la relecture ; cette formulation
+l'évite complètement plutôt que de risquer une leçon grammaticalement fausse.
 
-Ajouter une région avec du contenu (départements, préfectures) :
-
-1. Dans `tools/build-geo.mjs`, ajouter les codes INSEE des communes
-   chef-lieu de ses départements à `CHEF_LIEU_BY_DEPARTEMENT`, et leur
-   population à `POPULATION_BY_DEPARTEMENT` (trouvables via
-   `@etalab/decoupage-administratif`, déjà installé dans `tools/`). La forme
-   géographique, elle, est **déjà présente** dans `france.json` pour les 96
-   départements — aucune donnée cartographique à ajouter.
-2. Relancer `node tools/build-geo.mjs`.
-3. Ajouter la leçon dans `js/data/themes.js` avec `regionCode` = le code
-   INSEE de la région (voir `.claude/skills/format-contenu/`).
-4. Rien d'autre : l'accueil, la carte de la leçon et le quiz lisent tous
-   `france.json` + `data/themes.js` dynamiquement.
+Ajouter un contenu qui ne suit pas ce modèle (un autre type de question, un
+autre pays) : créer un nouveau `Theme` à la main dans `js/data/themes.js`, à
+côté de celui généré — voir `.claude/skills/format-contenu/`.
 
 ### Blasons
 
-Chaque préfecture a un champ `blason` dans le fichier généré, à `null` par
+Chaque préfecture a un champ `blason` dans `france.json`, à `null` par
 défaut : l'app affiche alors un espace réservé (le code du département dans
 un cadre en pointillés) plutôt qu'une image cassée.
 
 Pour les ajouter :
 
-1. Télécharger le blason de chaque département (SVG de préférence) depuis
-   Wikimedia Commons — domaine public ou licence libre selon le blason,
-   vérifier la mention de licence sur la page de chaque fichier avant de
-   l'utiliser.
-2. Les enregistrer dans `docs/icons/blasons/<code>.svg` (ex : `33.svg`).
+1. Redimensionner et compresser chaque image **avant** de l'ajouter — un
+   blason affiché à 64px n'a pas besoin d'un fichier de plusieurs centaines
+   de Ko. Cible : ~200×200px, format PNG palette ou WebP, quelques dizaines
+   de Ko maximum. Peu importe la source (Wikimedia Commons ou autre),
+   vérifier la licence de chaque image avant de l'utiliser.
+2. Les enregistrer dans `docs/icons/blasons/<code>.png` (ex : `33.png`).
 3. Dans `tools/build-geo.mjs`, ajouter une table `BLASON_BY_DEPARTEMENT` sur
    le modèle de `CHEF_LIEU_BY_DEPARTEMENT`, l'utiliser dans `prefectureFor()`
-   pour remplir le champ `blason`, puis relancer le script.
-4. Ajouter les fichiers à `ASSETS` dans `docs/sw.js`, et incrémenter
-   `CACHE_NAME`.
+   pour remplir le champ `blason`, puis relancer `node tools/build-geo.mjs`.
+4. **Rien d'autre à câbler dans `docs/sw.js`** : les blasons ne sont
+   volontairement pas dans la liste `ASSETS` précachée à l'installation (les
+   ajouter tous d'un coup, pour 96 départements, rendrait le premier
+   lancement long). Le service worker les met en cache **au fur et à
+   mesure** — la première fois qu'un département est ouvert, son blason est
+   téléchargé puis mémorisé pour la prochaine fois, y compris hors-ligne.
+   Voir le commentaire en tête de `docs/sw.js`.
 
 ---
 
@@ -185,7 +199,9 @@ docs/
   manifest.webmanifest   Nom, icône, couleurs de l'app installée.
   icons/          Icônes PNG (générées par tools/generate-icons.mjs).
   js/
-    data/themes.js     Contenu figé : thèmes, leçons, cartes.
+    data/themes.js     Contenu figé : thèmes, leçons, cartes. GÉNÉRÉ pour le
+                       thème "departements" (voir § 6) — ne pas éditer ces
+                       leçons à la main.
     data/geo.js         Chargement paresseux de la géométrie de France.
     data/geo/france.json  Régions + départements, un seul repère (voir § 6).
     engine/            Moteur SRS PUR : ni DOM, ni stockage, ni horloge.
@@ -202,6 +218,8 @@ tools/
   package.json         Dépendance de build isolée (@etalab/decoupage-administratif),
                         jamais expédiée dans docs/ — voir § 6.
   build-geo.mjs        Génère docs/js/data/geo/france.json (voir § 6).
+  build-content.mjs    Génère docs/js/data/themes.js à partir du fichier
+                        ci-dessus (voir § 6). À lancer après build-geo.mjs.
   generate-icons.mjs   Génère docs/icons/*.png.
 ```
 

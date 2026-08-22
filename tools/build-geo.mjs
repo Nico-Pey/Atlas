@@ -1,7 +1,9 @@
 /**
  * Génère docs/js/data/geo/france.json : les 13 régions et 96 départements de
  * France métropolitaine, prêts à afficher (tracés SVG, une seule projection
- * partagée), plus la position/population de chaque préfecture déjà apprise.
+ * partagée), plus la position et la population de la préfecture de CHAQUE
+ * département (source officielle, calculée pour les 96 — pas seulement ceux
+ * qui ont déjà une leçon).
  *
  * Source des tracés : IGN / INSEE (Admin Express COG), via le dépôt public
  * https://github.com/gregoiredavid/france-geojson — Licence Ouverte / Open
@@ -16,13 +18,22 @@
  * précision de coordonnées inutiles ici. Ce script les réduit à un format
  * compact (chemins SVG déjà projetés, arrondis à une décimale) et calcule au
  * passage tout ce que l'app ne doit pas recalculer à l'exécution : la boîte
- * englobante de chaque région et département (utile pour "zoomer" dessus).
+ * englobante de chaque région et département, et la position de chaque
+ * préfecture.
  *
  * Utilisation :  node tools/build-geo.mjs
+ * (à lancer avant tools/build-content.mjs, qui dépend de son résultat)
+ *
  * Dépendance de build uniquement (jamais expédiée dans docs/) :
  * @etalab/decoupage-administratif, installée dans tools/ — voir
- * tools/package.json. Sert uniquement à savoir à quelle région appartient
- * chaque département (absent des fichiers geojson).
+ * tools/package.json. Sert à savoir à quelle région appartient chaque
+ * département, quelle commune est sa préfecture, et la population de
+ * celle-ci (tout, sauf le tracé géographique lui-même).
+ *
+ * ⚠️ Ce script télécharge le fichier des communes de chacune des 13 régions
+ * (~40 Mo au total) pour calculer la position exacte de chaque préfecture.
+ * C'est lourd mais ponctuel : ça ne tourne que sur la machine du
+ * développeur, jamais dans l'app.
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -36,35 +47,6 @@ const REGIONS_URL =
   'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions-version-simplifiee.geojson';
 const DEPARTEMENTS_URL =
   'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson';
-/** Uniquement pour localiser les 12 préfectures déjà apprises (voir plus bas) — pas besoin du national. */
-const NOUVELLE_AQUITAINE_COMMUNES_URL =
-  'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/nouvelle-aquitaine/communes-nouvelle-aquitaine.geojson';
-
-/** Code INSEE de la commune chef-lieu de chaque département déjà appris. */
-const CHEF_LIEU_BY_DEPARTEMENT = {
-  '16': '16015', // Angoulême
-  '17': '17300', // La Rochelle
-  '19': '19272', // Tulle
-  '23': '23096', // Guéret
-  '24': '24322', // Périgueux
-  '33': '33063', // Bordeaux
-  '40': '40192', // Mont-de-Marsan
-  '47': '47001', // Agen
-  '64': '64445', // Pau
-  '79': '79191', // Niort
-  '86': '86194', // Poitiers
-  '87': '87085', // Limoges
-};
-
-/**
- * Population de la commune préfecture (source : INSEE, via
- * @etalab/decoupage-administratif — relevé manuel pour n'en garder que ces
- * 12 valeurs plutôt que de dépendre du paquet à l'exécution).
- */
-const POPULATION_BY_DEPARTEMENT = {
-  '16': 41908, '17': 79851, '19': 13401, '23': 12955, '24': 29055, '33': 267991,
-  '40': 31592, '47': 32801, '64': 80441, '79': 59854, '86': 89916, '87': 129937,
-};
 
 /** Bord long (en unités de viewBox) attribué à la plus grande dimension de la France métropolitaine. */
 const TARGET_LONG_EDGE = 400;
@@ -79,6 +61,17 @@ async function fetchJson(url) {
 
 function readLocalJson(relativePath) {
   return JSON.parse(readFileSync(join(HERE, relativePath), 'utf8'));
+}
+
+/** "Provence-Alpes-Côte d'Azur" → "provence-alpes-cote-d-azur", le slug utilisé par le dépôt source. */
+function slugify(name) {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // enlève les accents
+    .replace(/'/g, '-')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /** Polygon/MultiPolygon → tableau d'anneaux extérieurs (une entrée par îlot). */
@@ -112,14 +105,39 @@ function polygonCentroid(rings) {
 }
 
 async function main() {
-  const [regionsGeoJson, departementsGeoJson, communesGeoJson] = await Promise.all([
-    fetchJson(REGIONS_URL),
-    fetchJson(DEPARTEMENTS_URL),
-    fetchJson(NOUVELLE_AQUITAINE_COMMUNES_URL),
-  ]);
+  const [regionsGeoJson, departementsGeoJson] = await Promise.all([fetchJson(REGIONS_URL), fetchJson(DEPARTEMENTS_URL)]);
 
-  const departementsRef = readLocalJson('node_modules/@etalab/decoupage-administratif/data/departements.json');
+  const departementsRef = readLocalJson('node_modules/@etalab/decoupage-administratif/data/departements.json').filter(
+    (d) => d.zone === 'metro',
+  );
+  const communesRef = readLocalJson('node_modules/@etalab/decoupage-administratif/data/communes.json');
+  const regionsRef = readLocalJson('node_modules/@etalab/decoupage-administratif/data/regions.json').filter(
+    (r) => r.zone === 'metro',
+  );
+
   const regionCodeByDepartement = new Map(departementsRef.map((d) => [d.code, d.region]));
+  const chefLieuByDepartement = new Map(departementsRef.map((d) => [d.code, d.chefLieu]));
+  const communeByCode = new Map(communesRef.map((c) => [c.code, c]));
+
+  // --- Communes chef-lieu, région par région : chaque fichier ne contient
+  // que les communes de SA région, il faut donc en télécharger un par
+  // région pour couvrir les 96 préfectures. On ne garde que les communes
+  // chef-lieu de chaque fichier, tout le reste est jeté immédiatement.
+  const neededCommuneCodes = new Set(chefLieuByDepartement.values());
+  const communeGeometryByCode = new Map();
+
+  await Promise.all(
+    regionsRef.map(async (region) => {
+      const slug = slugify(region.nom);
+      const url = `https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/${slug}/communes-${slug}.geojson`;
+      const geojson = await fetchJson(url);
+      for (const feature of geojson.features) {
+        if (neededCommuneCodes.has(feature.properties.code)) {
+          communeGeometryByCode.set(feature.properties.code, feature.geometry);
+        }
+      }
+    }),
+  );
 
   // --- Projection : équirectangulaire avec correction de latitude (cos),
   // calculée UNE FOIS sur l'emprise nationale et partagée par régions et
@@ -181,26 +199,20 @@ async function main() {
     return { code: feature.properties.code, nom: feature.properties.nom, path, bbox };
   });
 
-  // Préfectures déjà apprises : centroïde de leur commune chef-lieu, dans la
-  // MÊME projection nationale (donc directement compatible avec le reste).
-  const chefLieuCodes = new Set(Object.values(CHEF_LIEU_BY_DEPARTEMENT));
-  const communeByCode = new Map(
-    communesGeoJson.features.filter((f) => chefLieuCodes.has(f.properties.code)).map((f) => [f.properties.code, f]),
-  );
-
   function prefectureFor(depCode) {
-    const communeCode = CHEF_LIEU_BY_DEPARTEMENT[depCode];
-    if (!communeCode) return null; // pas encore de contenu pour ce département
-
+    const communeCode = chefLieuByDepartement.get(depCode);
     const commune = communeByCode.get(communeCode);
-    if (!commune) throw new Error(`commune chef-lieu ${communeCode} introuvable (dép. ${depCode})`);
-    const rings = outerRings(commune.geometry);
-    const [lon, lat] = polygonCentroid(rings);
+    const geometry = communeGeometryByCode.get(communeCode);
+    if (!commune || !geometry) {
+      throw new Error(`préfecture introuvable pour le département ${depCode} (commune ${communeCode})`);
+    }
+
+    const [lon, lat] = polygonCentroid(outerRings(geometry));
     const [x, y] = project([lon, lat]);
 
     return {
-      nom: commune.properties.nom,
-      population: POPULATION_BY_DEPARTEMENT[depCode],
+      nom: commune.nom,
+      population: commune.population,
       x,
       y,
       // Rempli plus tard, voir docs/README.md § blasons. Tant que c'est null,
@@ -209,21 +221,24 @@ async function main() {
     };
   }
 
-  const departements = departementsGeoJson.features.map((feature) => {
-    const code = feature.properties.code;
-    const regionCode = regionCodeByDepartement.get(code);
-    if (!regionCode) throw new Error(`région introuvable pour le département ${code}`);
+  const departements = departementsGeoJson.features
+    .filter((feature) => regionCodeByDepartement.has(feature.properties.code))
+    .map((feature) => {
+      const code = feature.properties.code;
+      const { path, bbox } = buildShape(feature.geometry);
+      return {
+        code,
+        nom: feature.properties.nom,
+        regionCode: regionCodeByDepartement.get(code),
+        path,
+        bbox,
+        prefecture: prefectureFor(code),
+      };
+    });
 
-    const { path, bbox } = buildShape(feature.geometry);
-    return {
-      code,
-      nom: feature.properties.nom,
-      regionCode,
-      path,
-      bbox,
-      prefecture: prefectureFor(code),
-    };
-  });
+  if (departements.length !== 96) {
+    throw new Error(`attendu 96 départements métropolitains, obtenu ${departements.length}`);
+  }
 
   const output = {
     source: 'IGN / INSEE (Admin Express COG), via github.com/gregoiredavid/france-geojson — Licence Ouverte',
@@ -235,10 +250,9 @@ async function main() {
   mkdirSync(dirname(OUT_FILE), { recursive: true });
   writeFileSync(OUT_FILE, JSON.stringify(output));
 
-  const withContent = departements.filter((d) => d.prefecture).length;
   console.log(`écrit ${OUT_FILE}`);
   console.log(
-    `${regions.length} régions, ${departements.length} départements (${withContent} avec contenu), ` +
+    `${regions.length} régions, ${departements.length} départements (tous avec préfecture), ` +
       `${(JSON.stringify(output).length / 1024).toFixed(1)} Ko`,
   );
 }

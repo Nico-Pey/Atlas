@@ -11,7 +11,7 @@ qui utilise une répétition espacée simple.
 
 | | Où | État |
 |---|---|---|
-| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (50+ vérifs) + 8 tests du moteur. Carte de France (régions) à l'accueil, zoom sur les départements, quiz à choix multiples. |
+| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (60+ vérifs) + 8 tests du moteur. Carte de France (13 régions) à l'accueil, les 96 départements ont du contenu (généré, voir `docs/README.md` § 6), quiz à choix multiples, cache progressif. |
 | Expo / React Native | racine (`App.tsx`, `screens/`…) | compile, jamais lancée sur appareil |
 
 La **PWA est la voie retenue** : développement sous Windows, installation sur
