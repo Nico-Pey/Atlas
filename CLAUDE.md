@@ -19,6 +19,13 @@ l'écran d'accueil de l'iPhone via Safari (« Sur l'écran d'accueil »), plein
 écran, hors-ligne, sans Mac ni compte développeur Apple ni expiration à 7 jours.
 Déploiement gratuit par GitHub Pages depuis `docs/` — voir `docs/README.md`.
 
+⚠️ **Tout commit qui touche un fichier de `docs/js/` ou `docs/app.css` doit
+incrémenter `CACHE_NAME` dans `docs/sw.js`** (`atlas-vN` → `atlas-vN+1`),
+même un correctif qui semble mineur. Sans ça, `sw.js` a des octets
+identiques à avant, le navigateur n'a donc aucun signal qu'une nouvelle
+version existe, et l'app installée sur l'iPhone continue de servir
+l'ancienne version indéfiniment — déjà oublié deux fois de suite (PR #6).
+
 Une troisième version, native Swift/SwiftUI, existe sur la branche
 `claude/atlas-swift-native` (dossier `AtlasSwift/`) : écrite mais jamais
 compilée, abandonnée parce qu'un vieux Mac ne peut pas déployer sur un iPhone
