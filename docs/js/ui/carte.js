@@ -81,6 +81,20 @@ export const OPACITY_BY_STATUS = {
 const REGION_ZOOM_MARGIN = 10;
 
 /**
+ * À quel point on tolère un tap "à côté" d'un département, en multiples de
+ * son propre rayon (demi-diagonale de sa boîte englobante). Sert de filet de
+ * sécurité pour les petits départements collés les uns aux autres (Paris et
+ * la petite couronne, ~20-40px à l'écran une fois zoomé sur l'Île-de-France —
+ * bien sous le minimum de 44pt des HIG, voir .claude/skills/conventions-ui/).
+ * Un grand département n'en a presque jamais besoin : son tracé exact
+ * couvre déjà largement plus que 44px.
+ */
+const TAP_TOLERANCE_RADII = 1.5;
+/** Rayon plancher (unités de viewBox) sous lequel on ne réduit pas la tolérance,
+ * pour qu'un département vraiment minuscule reste rattrapable. */
+const MIN_HALF_DIAGONAL = 3;
+
+/**
  * Carte d'une région, département par département — zoomée sur sa boîte
  * englobante (même repère que carteRegions, donc pas de recalcul, juste un
  * viewBox différent).
@@ -114,6 +128,7 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
       class: 'carte-departement',
       role: 'button',
       tabindex: '0',
+      'data-code': dep.code,
       'aria-label': `${dep.nom} (${dep.code})`,
     });
 
@@ -131,7 +146,10 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
       }),
     );
 
-    group.addEventListener('click', () => onSelect(dep.code));
+    // Le clic est géré une seule fois, au niveau du SVG entier (voir plus
+    // bas) : il a besoin de voir TOUS les départements pour rattraper un tap
+    // qui manque un petit tracé. Le clavier, lui, cible toujours exactement
+    // l'élément avec le focus — pas d'ambiguïté, pas besoin de rattrapage.
     group.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -141,6 +159,22 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
 
     root.appendChild(group);
   }
+
+  root.addEventListener('click', (event) => {
+    const hit = event.target.closest('.carte-departement');
+    if (hit) {
+      onSelect(hit.dataset.code);
+      return;
+    }
+
+    // Le tap n'est tombé pile sur aucun tracé — courant sur un petit
+    // département (Paris fait ~20×40px une fois zoomé, bien en dessous d'un
+    // doigt). On rattrape avec le département le plus proche, mais borné :
+    // un tap loin de tout ne doit rien sélectionner.
+    const point = toSvgPoint(root, event.clientX, event.clientY);
+    const nearest = nearestDepartement(departements, point);
+    if (nearest) onSelect(nearest.code);
+  });
 
   for (const dep of departements) {
     const depStatus = status[dep.code] ?? 'non_vue';
@@ -161,6 +195,42 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
   }
 
   return root;
+}
+
+/** Coordonnées d'un clic écran, converties dans le repère du viewBox du SVG. */
+function toSvgPoint(svgRoot, clientX, clientY) {
+  const point = svgRoot.createSVGPoint();
+  point.x = clientX;
+  point.y = clientY;
+  return point.matrixTransform(svgRoot.getScreenCTM().inverse());
+}
+
+/**
+ * Département dont le centre est le plus proche du point donné, en distance
+ * normalisée par la taille du département (un petit département "attire"
+ * donc un tap proportionnellement plus loin qu'un grand). Retourne `null` si
+ * même le plus proche est hors de sa tolérance — pas de sélection surprise
+ * sur un tap loin de tout tracé.
+ */
+function nearestDepartement(departements, point) {
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const dep of departements) {
+    const [minX, minY, maxX, maxY] = dep.bbox;
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    const halfDiagonal = Math.max(Math.hypot(maxX - minX, maxY - minY) / 2, MIN_HALF_DIAGONAL);
+    const distance = Math.hypot(point.x - cx, point.y - cy);
+    const score = distance / halfDiagonal;
+
+    if (score < bestScore) {
+      bestScore = score;
+      best = dep;
+    }
+  }
+
+  return bestScore <= TAP_TOLERANCE_RADII ? best : null;
 }
 
 /** Marge (en unités de viewBox) laissée autour d'une silhouette isolée. */

@@ -213,7 +213,7 @@ button {
    occuper toute la largeur de l'écran, elle pousserait le reste de l'écran
    hors du champ de vision. */
 .carte {
-  height: min(40vh, 340px);
+  height: min(46vh, 400px);
   width: auto;
   max-width: 100%;
 }
