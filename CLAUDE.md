@@ -11,7 +11,7 @@ qui utilise une répétition espacée simple.
 
 | | Où | État |
 |---|---|---|
-| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (60+ vérifs) + 8 tests du moteur. Carte de France (13 régions) à l'accueil, les 96 départements ont du contenu (généré, voir `docs/README.md` § 6), quiz à choix multiples, cache progressif. |
+| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (40 vérifs) + 12 tests du moteur. Carte de France (13 régions) à l'accueil, les 96 départements ont du contenu (généré, voir `docs/README.md` § 6), quiz du jour plafonné à 10 cartes interrogées dans plusieurs sens, cache progressif. |
 | Expo / React Native | racine (`App.tsx`, `screens/`…) | compile, jamais lancée sur appareil |
 
 La **PWA est la voie retenue** : développement sous Windows, installation sur
@@ -78,12 +78,19 @@ Résumé :
 
 1. Une carte n'entre dans le suivi que **vue en leçon** (`markSeen`,
    déclenché en tapant un département dans LessonScreen). Une carte jamais
-   vue en leçon n'apparaît jamais au quiz.
+   vue en leçon n'apparaît jamais au quiz. C'est volontaire : l'utilisateur
+   choisit lui-même le secteur qu'il apprend (une région à la fois), plutôt
+   que de se voir imposer un département du Nord-Est juste après un du
+   Sud-Ouest.
 2. **Réussie au quiz** → sort du pool pendant **3 jours**.
    **Ratée** → revient dès **le lendemain**.
 3. Le **pool d'affichage** (`nouvelle` / `en_cours` / `connue`) se recalcule
    à partir du nombre de tentatives et de la série de réussites d'affilée —
    ce n'est pas un état stocké séparément.
+4. Le quiz retient **au plus 10 cartes par jour**, figées pour la journée
+   (on peut le refaire à l'identique), et **seule la première réponse de la
+   journée** compte pour la progression — les passages suivants sont de
+   l'entraînement.
 
 ## État d'avancement
 

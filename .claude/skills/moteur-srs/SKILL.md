@@ -50,6 +50,43 @@ progressives (pas de "1, 3, 7, 14 jours..." façon Anki classique) : c'est un
 choix produit pour la V1, pas un oubli. Si on veut un jour des intervalles
 progressifs, ça se discute avec l'utilisateur avant de toucher au code.
 
+## Le lot du jour (10 cartes maximum)
+
+Le quiz ne propose pas toutes les cartes dues : il en retient **au plus 10**
+(`DAILY_CARD_LIMIT`), les plus en retard d'abord. Une session bornée est
+tenable tous les matins ; une liste qui s'allonge sans fin ne l'est pas.
+
+- `selectDailyCardIds(allProgress, on, limit)` fait ce choix. Il est
+  **déterministe** (aucun hasard) : même entrée, même sortie. C'est ce qui
+  permet de refaire le quiz dans la journée avec exactement le même lot.
+- Le lot est **figé pour la journée** et mémorisé par `/storage`
+  (`getDailyCardIds`). Seule exception : s'il n'est pas plein, il se complète
+  avec les cartes devenues dues entre-temps — typiquement une carte tout juste
+  apprise en leçon, due immédiatement. Les cartes déjà dans le lot, elles, ne
+  changent jamais avant le lendemain.
+
+## Une seule comptabilisation par carte et par jour
+
+Refaire le quiz dans la même journée est un **entraînement libre** : ça
+n'avance ni ne recule la progression. Seule la **première réponse de la
+journée** pour une carte donnée met à jour son état SRS
+(`storage.recordDailyReview`).
+
+Sans cette règle, il suffirait de relancer le quiz jusqu'à tomber juste pour
+s'auto-décerner un "connue" qui ne voudrait plus rien dire — l'inverse de ce
+que mesure une répétition espacée.
+
+## Ce qu'une "réussite" veut dire côté quiz
+
+Le quiz interroge chaque département sous **2 facettes** tirées au sort
+(nom, numéro, préfecture, ou placement sur la carte). La carte n'est comptée
+comme réussie que si **les deux facettes** sont correctes ; une seule erreur
+suffit à compter la manche comme un échec (retour dès le lendemain).
+
+Le SRS n'est mis à jour **qu'à la fin de la manche**, jamais facette par
+facette : une carte = une réponse SRS par jour, quel que soit le nombre de
+questions posées dessus.
+
 ## Ce que ce module ne fait PAS
 
 - Il ne lit jamais l'heure ou la date lui-même (`new Date()` interdit dans
@@ -68,6 +105,9 @@ progressifs, ça se discute avec l'utilisateur avant de toucher au code.
 - `getPool(progress)` → `'nouvelle' | 'en_cours' | 'connue'`.
 - `isDue(progress, on)` → la carte doit-elle apparaître au quiz ce jour-là ?
 - `getDueCardIds(allProgress, on)` → filtre une liste de progressions.
+- `selectDailyCardIds(allProgress, on, limit)` → le lot du jour, plafonné et
+  déterministe (voir plus haut). Ne mute pas la liste reçue.
+- `DAILY_CARD_LIMIT` → la valeur de ce plafond (10).
 
 ## Exemple
 

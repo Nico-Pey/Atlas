@@ -13,7 +13,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { addDays, toISODate } from '../docs/js/engine/date.js';
-import { getDueCardIds, getPool, isDue, markSeen, reviewCard } from '../docs/js/engine/srs.js';
+import {
+  DAILY_CARD_LIMIT,
+  getDueCardIds,
+  getPool,
+  isDue,
+  markSeen,
+  reviewCard,
+  selectDailyCardIds,
+} from '../docs/js/engine/srs.js';
 
 test('addDays gère les cas limites du calendrier', () => {
   assert.equal(addDays('2026-08-17', 3), '2026-08-20');
@@ -94,4 +102,55 @@ test('getDueCardIds ne retient que les cartes dues ce jour-là', () => {
   assert.deepEqual(getDueCardIds(cards, '2026-08-17'), ['a']);
   assert.deepEqual(getDueCardIds(cards, '2026-08-18').sort(), ['a', 'c'], 'la ratée revient demain');
   assert.deepEqual(getDueCardIds(cards, '2026-08-20').sort(), ['a', 'b', 'c'], 'la réussie revient à J+3');
+});
+
+test('selectDailyCardIds plafonne la sélection du jour', () => {
+  const cards = Array.from({ length: 25 }, (_, i) =>
+    markSeen(`carte-${String(i).padStart(2, '0')}`, '2026-08-17'),
+  );
+
+  const selection = selectDailyCardIds(cards, '2026-08-17');
+
+  assert.equal(selection.length, DAILY_CARD_LIMIT);
+  assert.equal(DAILY_CARD_LIMIT, 10);
+});
+
+test('selectDailyCardIds ne retient que les cartes dues', () => {
+  const cards = [
+    markSeen('due', '2026-08-17'),
+    reviewCard(markSeen('reussie', '2026-08-17'), true, '2026-08-17'), // repoussée à J+3
+  ];
+
+  assert.deepEqual(selectDailyCardIds(cards, '2026-08-17'), ['due']);
+});
+
+test('selectDailyCardIds priorise les cartes les plus en retard', () => {
+  // Trois cartes dues, mais de plus en plus anciennes.
+  const cards = [
+    { cardId: 'recente', seenAt: '2026-08-17', attempts: 1, streak: 1, nextReviewAt: '2026-08-20' },
+    { cardId: 'ancienne', seenAt: '2026-08-01', attempts: 1, streak: 0, nextReviewAt: '2026-08-05' },
+    { cardId: 'moyenne', seenAt: '2026-08-10', attempts: 1, streak: 0, nextReviewAt: '2026-08-12' },
+  ];
+
+  assert.deepEqual(selectDailyCardIds(cards, '2026-08-20', 2), ['ancienne', 'moyenne']);
+});
+
+test('selectDailyCardIds est déterministe et ne modifie pas la liste reçue', () => {
+  const cards = [
+    markSeen('b', '2026-08-17'),
+    markSeen('a', '2026-08-17'),
+    markSeen('c', '2026-08-17'),
+  ];
+  const snapshot = cards.map((c) => c.cardId);
+
+  const first = selectDailyCardIds(cards, '2026-08-17');
+  const second = selectDailyCardIds(cards, '2026-08-17');
+
+  assert.deepEqual(first, second, 'même entrée, même sortie : le lot du jour est reproductible');
+  assert.deepEqual(first, ['a', 'b', 'c'], 'à date égale, les identifiants départagent');
+  assert.deepEqual(
+    cards.map((c) => c.cardId),
+    snapshot,
+    'la liste reçue reste intacte (le moteur ne mute jamais ses entrées)',
+  );
 });
