@@ -11,7 +11,7 @@ qui utilise une répétition espacée simple.
 
 | | Où | État |
 |---|---|---|
-| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (53 vérifs) + 12 tests du moteur. Carte de France (13 régions) à l'accueil, les 96 départements ont du contenu (généré, voir `docs/README.md` § 6), quiz du jour plafonné à 10 cartes (nom du département d'abord, puis les 2 infos restantes), cache progressif. |
+| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (87 vérifs) + 12 tests du moteur. Carte de France à l'accueil, colorée par avancement (grise tant qu'une région n'est pas visitée), les 96 départements ont du contenu (généré, voir `docs/README.md` § 6), quiz du jour plafonné à 10 cartes (nom du département d'abord, puis les 2 infos restantes), cache progressif, onglet Réglages (version installée + recherche de mise à jour). |
 | Expo / React Native | racine (`App.tsx`, `screens/`…) | compile, jamais lancée sur appareil |
 
 La **PWA est la voie retenue** : développement sous Windows, installation sur
@@ -25,6 +25,9 @@ même un correctif qui semble mineur. Sans ça, `sw.js` a des octets
 identiques à avant, le navigateur n'a donc aucun signal qu'une nouvelle
 version existe, et l'app installée sur l'iPhone continue de servir
 l'ancienne version indéfiniment — déjà oublié deux fois de suite (PR #6).
+L'onglet **Réglages** de l'app affiche la version réellement installée sur
+l'appareil (le nom du cache, pas une constante recopiée) : c'est le moyen de
+vérifier depuis l'iPhone que la mise à jour est bien arrivée.
 
 Une troisième version, native Swift/SwiftUI, existe sur la branche
 `claude/atlas-swift-native` (dossier `AtlasSwift/`) : écrite mais jamais

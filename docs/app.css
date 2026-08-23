@@ -487,6 +487,62 @@ button {
   margin: 0;
 }
 
+/* ---------- Réglages ---------- */
+
+.settings-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
+.settings-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Le numéro de version : gros et en chiffres à chasse fixe, parce que c'est
+   ce qu'on vient comparer d'un coup d'œil. */
+.settings-version {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0;
+}
+
+.settings-hint {
+  font-size: 15px;
+  margin: 0;
+}
+
+.settings-button {
+  min-height: var(--touch-target);
+  padding: 0 var(--space-lg);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-button);
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.settings-button:disabled {
+  opacity: 0.5;
+}
+
+/* Vide tant qu'on n'a rien à dire : on réserve la hauteur d'une ligne pour que
+   le bouton ne saute pas sous le doigt quand le message apparaît. */
+.settings-message {
+  min-height: 1.45em;
+  font-size: 15px;
+  margin: 0;
+}
+
 /* ---------- Progression ---------- */
 
 .stats-block {
@@ -519,12 +575,15 @@ button {
   font-weight: 600;
 }
 
+/* Action destructrice : volontairement discrète (pas de fond plein, pas de
+   rouge criard) pour ne pas attirer le doigt, mais bien assez grande pour être
+   touchée quand on la cherche. */
 .reset-button {
   min-height: var(--touch-target);
-  margin-top: var(--space-md);
+  padding: 0 var(--space-md);
   background: none;
   border: 1px solid var(--separator);
   border-radius: var(--radius-button);
-  color: var(--text-muted);
+  color: var(--danger);
   font-size: 15px;
 }

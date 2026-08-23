@@ -8,13 +8,16 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 53 vérifications dans un navigateur
+12 tests du moteur + 87 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
 
 L'accueil affiche la carte de France (13 régions, toutes cliquables) ; toucher
-une région zoome sur ses départements. **Les 96 départements métropolitains
+une région zoome sur ses départements. C'est aussi une **carte
+d'avancement** : une région jamais visitée est grise, et verdit à mesure que
+ses départements sont appris — exactement comme les départements à l'intérieur
+d'une leçon. **Les 96 départements métropolitains
 ont du contenu** (question/réponse sur leur préfecture — voir § 6, comment
 c'est généré).
 
@@ -125,9 +128,23 @@ Quand tu modifies un fichier :
 2. **Incrémente `CACHE_NAME` dans `docs/sw.js`** (`atlas-v1` → `atlas-v2`).
    Sans ça, les iPhones qui ont déjà installé l'app continueront de servir
    l'ancienne version depuis leur cache.
-3. Sur l'iPhone, ferme complètement l'app et rouvre-la (parfois deux fois : le
-   service worker installe la nouvelle version au premier lancement et la sert
-   au suivant).
+3. Sur l'iPhone, ouvre l'onglet **Réglages** et touche **« Rechercher une mise
+   à jour »**. Il t'annonce soit « tu as déjà la dernière version », soit
+   « nouvelle version installée » suivi d'un rechargement automatique — plus
+   besoin de fermer l'app et de croiser les doigts.
+
+### Savoir quelle version on a
+
+L'onglet Réglages affiche la **version installée sur l'appareil**, par exemple
+`atlas-v10`. Ce numéro n'est écrit nulle part dans le code de l'écran : c'est le
+nom du cache réellement créé par `sw.js` sur le téléphone, lu via l'API
+`caches`. Il ne peut donc pas se désynchroniser du contenu servi — s'il affiche
+`atlas-v9` alors que `main` est en `atlas-v10`, c'est bien l'ancienne version
+qui tourne.
+
+C'est aussi le meilleur garde-fou contre l'oubli d'incrémenter `CACHE_NAME` :
+si le numéro ne bouge pas après une publication, c'est ou bien que GitHub Pages
+n'a pas fini de publier, ou bien que l'étape 2 a été oubliée.
 
 ---
 
@@ -243,7 +260,8 @@ docs/
       home.js            Accueil : carte de France, une région = un point d'entrée.
       lesson.js          Leçon : carte d'une région + fiche département.
       quiz.js             Quiz : le nom d'abord, puis les 2 infos restantes.
-      progress.js         Statistiques de progression.
+      progress.js         Statistiques de progression (consultation seule).
+      settings.js         Réglages : version installée, mise à jour, remise à zéro.
       dom.js              Micro-outils de construction d'éléments HTML/SVG.
     app.js             Routage par ancre + barre d'onglets.
 tools/
