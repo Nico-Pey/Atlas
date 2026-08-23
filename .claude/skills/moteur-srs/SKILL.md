@@ -64,6 +64,11 @@ tenable tous les matins ; une liste qui s'allonge sans fin ne l'est pas.
   avec les cartes devenues dues entre-temps — typiquement une carte tout juste
   apprise en leçon, due immédiatement. Les cartes déjà dans le lot, elles, ne
   changent jamais avant le lendemain.
+- Seul le **contenu** du lot est figé, pas son **ordre** : `ui/quiz.js`
+  mélange les manches (`shuffled()`) à chaque ouverture de l'écran et à
+  chaque "Refaire ce quiz". Sans ça, la position dans la liste finirait par
+  se retenir aussi bien que le département qui s'y trouve — ce n'est pas ce
+  qu'on veut apprendre.
 
 ## Une seule comptabilisation par carte et par jour
 

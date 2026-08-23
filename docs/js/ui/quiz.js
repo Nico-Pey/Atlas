@@ -6,10 +6,14 @@
  * 1. **Au plus 10 départements par jour**, choisis parmi les cartes dues
  *    (voir engine/srs.selectDailyCardIds). Une session bornée est tenable
  *    tous les matins ; une liste qui s'allonge sans fin ne l'est pas.
- * 2. **Le lot du jour est figé** : refaire le quiz dans la même journée
- *    redonne les mêmes départements, et seule la première réponse de la
- *    journée compte pour le SRS (storage.recordDailyReview). Les passages
- *    suivants sont de l'entraînement libre.
+ * 2. **Le lot du jour est figé, mais pas son ordre.** Refaire le quiz dans la
+ *    même journée redonne les mêmes départements — et seule la première
+ *    réponse de la journée compte pour le SRS (storage.recordDailyReview),
+ *    les passages suivants sont de l'entraînement libre — mais l'ordre des
+ *    manches est retiré à chaque ouverture de l'écran. Sinon la 3e position
+ *    finit par se retenir aussi bien que le département qui s'y trouve, ce
+ *    qui fausse la répétition : c'est le département qu'on veut apprendre,
+ *    pas sa place dans la liste.
  * 3. **Une manche se joue en deux temps**, toujours dans le même ordre :
  *
  *      Temps 1 — retrouver le NOM du département, à partir d'un énoncé tiré
@@ -140,7 +144,9 @@ export function quizScreen() {
           text: 'Refaire ce quiz',
           onClick: () => {
             const counted = new Set(getReviewedTodayCardIds(today()));
-            rounds = rounds.map((round) => buildRound(round.card, geo, counted.has(round.card.id)));
+            // Même mélange qu'à l'ouverture de l'écran : "refaire le quiz"
+            // ne doit pas redonner l'ordre qu'on vient tout juste de voir.
+            rounds = shuffled(rounds.map((round) => buildRound(round.card, geo, counted.has(round.card.id))));
             index = 0;
             correctRounds = 0;
             resetRoundState();
@@ -434,11 +440,16 @@ export function quizScreen() {
 
       const day = today();
       const alreadyCounted = new Set(getReviewedTodayCardIds(day));
-      rounds = getDailyCardIds(day)
-        .map(findCard)
-        .filter((card) => card !== undefined)
-        .map((card) => buildRound(card, geo, alreadyCounted.has(card.id)))
-        .filter((round) => round !== null);
+      // shuffled() : le contenu du lot est figé pour la journée (voir le
+      // commentaire d'en-tête, point 2), pas son ordre — sinon la position
+      // dans la liste finirait par se retenir aussi bien que la carte.
+      rounds = shuffled(
+        getDailyCardIds(day)
+          .map(findCard)
+          .filter((card) => card !== undefined)
+          .map((card) => buildRound(card, geo, alreadyCounted.has(card.id)))
+          .filter((round) => round !== null),
+      );
 
       render();
     })
