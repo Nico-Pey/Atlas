@@ -8,7 +8,7 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 87 vérifications dans un navigateur
+12 tests du moteur + 89 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
@@ -25,7 +25,9 @@ c'est généré).
 cartes à réviser. Le lot est figé pour la journée : on peut refaire le quiz
 autant de fois qu'on veut avec les mêmes départements (c'est de
 l'entraînement — seule la première réponse de la journée compte pour la
-progression), et il se renouvelle le lendemain.
+progression), et il se renouvelle le lendemain. **L'ordre de passage, lui,
+n'est pas figé** : il est retiré à chaque ouverture de l'écran, pour qu'on
+retienne le département plutôt que sa place dans la liste.
 
 Chaque département est interrogé **dans plusieurs sens**, pour éviter de
 toujours réciter la même chose dans la même direction. Une manche se joue en
