@@ -8,17 +8,29 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-8 tests du moteur + une soixantaine de vérifications dans un navigateur
+12 tests du moteur + une quarantaine de vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
-vraies frontières régions/départements, quiz à choix multiples, mise en cache
-progressive, service worker).
+vraies frontières régions/départements, quiz, mise en cache progressive,
+service worker).
 
 L'accueil affiche la carte de France (13 régions, toutes cliquables) ; toucher
 une région zoome sur ses départements. **Les 96 départements métropolitains
 ont du contenu** (question/réponse sur leur préfecture — voir § 6, comment
-c'est généré). Le quiz se joue en deux temps : deviner le département à son
-seul contour, puis sa préfecture, chacun parmi jusqu'à 4 propositions (moins
-pour une région qui a peu de départements, comme la Corse).
+c'est généré).
+
+**Le quiz du jour** propose au plus **10 départements**, choisis parmi les
+cartes à réviser. Le lot est figé pour la journée : on peut refaire le quiz
+autant de fois qu'on veut avec les mêmes départements (c'est de
+l'entraînement — seule la première réponse de la journée compte pour la
+progression), et il se renouvelle le lendemain.
+
+Chaque département est interrogé **dans plusieurs sens**, pour éviter de
+toujours réciter la même chose dans la même direction. Une manche part d'un
+énoncé tiré au sort — le numéro, le nom, ou la silhouette du département —
+puis pose 2 questions parmi celles que l'énoncé n'a pas déjà données : son
+nom, son numéro, sa préfecture, ou son placement sur la carte (on désigne
+d'abord la région, puis le département à l'intérieur). Les deux réponses
+doivent être justes pour que la carte compte comme réussie.
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.

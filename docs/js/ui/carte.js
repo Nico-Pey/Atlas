@@ -20,10 +20,12 @@ import { svg } from './dom.js';
  * @param {object} options
  * @param {import('../data/geo.js').FranceGeo} options.geo
  * @param {Set<string>} options.activeRegionCodes  Régions qui ont du contenu.
+ * @param {string | null} [options.revealCode]   Région à mettre en évidence (retour visuel du quiz).
+ * @param {boolean} [options.revealIsCorrect]    Vert si vrai, rouge sinon.
  * @param {(regionCode: string) => void} options.onSelect
  * @returns {SVGElement}
  */
-export function carteRegions({ geo, activeRegionCodes, onSelect }) {
+export function carteRegions({ geo, activeRegionCodes, revealCode = null, revealIsCorrect = true, onSelect }) {
   const root = svg('svg', {
     viewBox: `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
     class: 'carte',
@@ -60,6 +62,24 @@ export function carteRegions({ geo, activeRegionCodes, onSelect }) {
     });
 
     root.appendChild(group);
+  }
+
+  // Mise en évidence redessinée par-dessus tout le reste : deux régions
+  // voisines partagent une frontière, et celle dessinée en dernier peint son
+  // trait par-dessus l'autre (même raison que pour les départements).
+  const revealed = geo.regions.find((r) => r.code === revealCode);
+  if (revealed) {
+    root.appendChild(
+      svg('path', {
+        d: revealed.path,
+        fill: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
+        'fill-opacity': 0.3,
+        stroke: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
+        'stroke-width': 2,
+        'stroke-linejoin': 'round',
+        'pointer-events': 'none',
+      }),
+    );
   }
 
   return root;
@@ -168,21 +188,7 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
     root.appendChild(group);
   }
 
-  root.addEventListener('click', (event) => {
-    const hit = event.target.closest('.carte-departement');
-    if (hit) {
-      onSelect(hit.dataset.code);
-      return;
-    }
-
-    // Le tap n'est tombé pile sur aucun tracé — courant sur un petit
-    // département (Paris fait ~20×40px une fois zoomé, bien en dessous d'un
-    // doigt). On rattrape avec le département le plus proche, mais borné :
-    // un tap loin de tout ne doit rien sélectionner.
-    const point = toSvgPoint(root, event.clientX, event.clientY);
-    const nearest = nearestDepartement(departements, point);
-    if (nearest) onSelect(nearest.code);
-  });
+  attachDepartementTapHandler(root, departements, onSelect);
 
   // Contour du département sélectionné, redessiné par-dessus tout le reste
   // (voir le commentaire dans la boucle ci-dessus). `pointer-events: none`
@@ -252,6 +258,33 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+/**
+ * Gère le clic sur une carte de départements, avec rattrapage du tap le plus
+ * proche. Un seul écouteur au niveau du SVG : il a besoin de voir TOUS les
+ * départements pour rattraper un tap qui manque un petit tracé.
+ *
+ * @param {SVGElement} root
+ * @param {import('../data/geo.js').DepartementGeo[]} departements
+ * @param {(code: string) => void} onSelect
+ */
+function attachDepartementTapHandler(root, departements, onSelect) {
+  root.addEventListener('click', (event) => {
+    const hit = event.target.closest('.carte-departement');
+    if (hit) {
+      onSelect(hit.dataset.code);
+      return;
+    }
+
+    // Le tap n'est tombé pile sur aucun tracé — courant sur un petit
+    // département (Paris fait ~29×15px une fois zoomé, bien en dessous d'un
+    // doigt). On rattrape avec le département le plus proche, mais borné :
+    // un tap loin de tout ne doit rien sélectionner.
+    const point = toSvgPoint(root, event.clientX, event.clientY);
+    const nearest = nearestDepartement(departements, point);
+    if (nearest) onSelect(nearest.code);
+  });
+}
+
 /** Coordonnées d'un clic écran, converties dans le repère du viewBox du SVG. */
 function toSvgPoint(svgRoot, clientX, clientY) {
   const point = svgRoot.createSVGPoint();
@@ -286,6 +319,85 @@ function nearestDepartement(departements, point) {
   }
 
   return bestScore <= TAP_TOLERANCE_RADII ? best : null;
+}
+
+/**
+ * Carte d'une région pour la facette "placement" du quiz : tous les
+ * départements sont rendus **strictement à l'identique**.
+ *
+ * Contrairement à `carteDepartements`, aucune couleur ne dépend du statut
+ * SRS et aucun point de préfecture n'est affiché : la carte ne doit donner
+ * aucun indice sur la réponse attendue, ni même trahir quels départements
+ * ont déjà été appris.
+ *
+ * @param {object} options
+ * @param {import('../data/geo.js').FranceGeo} options.geo
+ * @param {string} options.regionCode
+ * @param {string | null} [options.revealCode]  Département à mettre en évidence (retour visuel après réponse).
+ * @param {boolean} [options.revealIsCorrect]   Vert si vrai, rouge sinon.
+ * @param {(code: string) => void} options.onSelect
+ * @returns {SVGElement}
+ */
+export function cartePlacementDepartements({ geo, regionCode, revealCode = null, revealIsCorrect = true, onSelect }) {
+  const region = geo.regions.find((r) => r.code === regionCode);
+  const departements = geo.departements.filter((d) => d.regionCode === regionCode);
+
+  const root = svg('svg', {
+    viewBox: region
+      ? bboxToViewBox(padBbox(region.bbox, REGION_ZOOM_MARGIN))
+      : `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
+    class: 'carte',
+    role: 'group',
+    'aria-label': region ? `Départements de ${region.nom}` : 'Départements',
+  });
+
+  for (const dep of departements) {
+    const group = svg('g', {
+      class: 'carte-departement',
+      role: 'button',
+      tabindex: '0',
+      'data-code': dep.code,
+      'aria-label': dep.nom,
+    });
+
+    group.appendChild(
+      svg('path', {
+        d: dep.path,
+        fill: 'var(--surface)',
+        stroke: 'var(--separator)',
+        'stroke-width': 1,
+        'stroke-linejoin': 'round',
+      }),
+    );
+
+    group.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onSelect(dep.code);
+      }
+    });
+
+    root.appendChild(group);
+  }
+
+  attachDepartementTapHandler(root, departements, onSelect);
+
+  const revealed = departements.find((d) => d.code === revealCode);
+  if (revealed) {
+    root.appendChild(
+      svg('path', {
+        d: revealed.path,
+        fill: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
+        'fill-opacity': 0.35,
+        stroke: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
+        'stroke-width': 2.5,
+        'stroke-linejoin': 'round',
+        'pointer-events': 'none',
+      }),
+    );
+  }
+
+  return root;
 }
 
 /**

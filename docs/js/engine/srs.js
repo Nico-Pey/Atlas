@@ -103,3 +103,35 @@ export function isDue(progress, on) {
 export function getDueCardIds(allProgress, on) {
   return allProgress.filter((p) => isDue(p, on)).map((p) => p.cardId);
 }
+
+/**
+ * Nombre maximum de cartes proposées au quiz dans une même journée.
+ * Une session courte et bornée vaut mieux qu'une liste qui s'allonge sans
+ * fin : c'est ce qui rend l'app tenable tous les matins.
+ */
+export const DAILY_CARD_LIMIT = 10;
+
+/**
+ * Sélectionne les cartes du jour parmi celles qui sont dues.
+ *
+ * Volontairement **déterministe** (aucun hasard) : même entrée, même sortie.
+ * C'est ce qui permet de recalculer la même sélection à l'identique, et donc
+ * de refaire le quiz plusieurs fois dans la journée avec les mêmes cartes.
+ *
+ * Priorité aux cartes les plus en retard (`nextReviewAt` le plus ancien),
+ * pour qu'une carte due depuis longtemps ne reste pas indéfiniment derrière
+ * des cartes tout juste dues. À date égale, l'ordre des identifiants
+ * départage — arbitraire mais stable.
+ *
+ * @param {CardProgress[]} allProgress
+ * @param {ISODate} on
+ * @param {number} [limit]
+ * @returns {string[]}
+ */
+export function selectDailyCardIds(allProgress, on, limit = DAILY_CARD_LIMIT) {
+  return allProgress
+    .filter((p) => isDue(p, on))
+    .sort((a, b) => a.nextReviewAt.localeCompare(b.nextReviewAt) || a.cardId.localeCompare(b.cardId))
+    .slice(0, limit)
+    .map((p) => p.cardId);
+}

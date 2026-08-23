@@ -14,7 +14,7 @@
  * l'app de l'écran d'accueil ou vides les données de Safari.
  */
 
-import { getDueCardIds, markSeen, reviewCard } from '../engine/srs.js';
+import { DAILY_CARD_LIMIT, getDueCardIds, markSeen, reviewCard, selectDailyCardIds } from '../engine/srs.js';
 
 /**
  * @typedef {import('../engine/srs.js').CardProgress} CardProgress
@@ -23,6 +23,9 @@ import { getDueCardIds, markSeen, reviewCard } from '../engine/srs.js';
 
 /** Le suffixe de version permettra de migrer proprement si le format change. */
 const STORAGE_KEY = 'atlas.progress.v1';
+
+/** Sélection du quiz du jour — voir getDailySelection. */
+const DAILY_KEY = 'atlas.daily.v1';
 
 /**
  * Lit toute la progression.
@@ -113,4 +116,119 @@ export function getDueCardIdsToday(on) {
 /** Efface toute la progression. */
 export function resetAllProgress() {
   writeAll({});
+  writeDaily(null);
+}
+
+// ---------------------------------------------------------------------------
+// Sélection du quiz du jour
+// ---------------------------------------------------------------------------
+
+/**
+ * @typedef {object} DailySelection
+ * @property {ISODate} date
+ * @property {string[]} cardIds        Les (au plus) 10 cartes du jour.
+ * @property {string[]} reviewedCardIds  Celles déjà comptées pour le SRS aujourd'hui.
+ */
+
+/** @returns {DailySelection | null} */
+function readDaily() {
+  try {
+    const raw = localStorage.getItem(DAILY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (typeof parsed.date !== 'string' || !Array.isArray(parsed.cardIds)) return null;
+    return {
+      date: parsed.date,
+      cardIds: parsed.cardIds,
+      reviewedCardIds: Array.isArray(parsed.reviewedCardIds) ? parsed.reviewedCardIds : [],
+    };
+  } catch (error) {
+    console.warn('Atlas : sélection du jour illisible, elle sera recalculée.', error);
+    return null;
+  }
+}
+
+/** @param {DailySelection | null} daily */
+function writeDaily(daily) {
+  try {
+    if (daily === null) localStorage.removeItem(DAILY_KEY);
+    else localStorage.setItem(DAILY_KEY, JSON.stringify(daily));
+  } catch (error) {
+    console.warn("Atlas : impossible d'enregistrer la sélection du jour.", error);
+  }
+}
+
+/**
+ * Les cartes du quiz d'aujourd'hui — au plus DAILY_CARD_LIMIT.
+ *
+ * La sélection est **figée pour la journée** : refaire le quiz une deuxième
+ * fois dans la même journée redonne exactement les mêmes cartes (c'est le but
+ * — s'entraîner sur un lot stable), et elle se renouvelle le lendemain.
+ *
+ * Une exception volontaire : si le lot du jour n'est pas plein et que de
+ * nouvelles cartes sont devenues dues depuis (typiquement des cartes tout
+ * juste apprises en leçon, dues immédiatement d'après la règle SRS), on
+ * complète le lot. Les cartes déjà sélectionnées, elles, ne changent jamais.
+ *
+ * @param {ISODate} today
+ * @returns {string[]}
+ */
+export function getDailyCardIds(today) {
+  const stored = readDaily();
+  const eligible = selectDailyCardIds(getAllProgress(), today);
+
+  if (!stored || stored.date !== today) {
+    const fresh = { date: today, cardIds: eligible, reviewedCardIds: [] };
+    writeDaily(fresh);
+    return fresh.cardIds;
+  }
+
+  // Le lot du jour existe déjà : on le garde tel quel, en le complétant
+  // seulement s'il reste de la place.
+  if (stored.cardIds.length >= DAILY_CARD_LIMIT) return stored.cardIds;
+
+  const additions = eligible.filter((id) => !stored.cardIds.includes(id));
+  if (additions.length === 0) return stored.cardIds;
+
+  const cardIds = [...stored.cardIds, ...additions].slice(0, DAILY_CARD_LIMIT);
+  writeDaily({ ...stored, cardIds });
+  return cardIds;
+}
+
+/**
+ * Enregistre une réponse au quiz, **une seule fois par carte et par jour**.
+ *
+ * Refaire le quiz dans la journée est un entraînement libre : ça n'avance ni
+ * ne recule la progression SRS, sinon on pourrait relancer le quiz jusqu'à
+ * tomber juste et s'auto-décerner un "connue" qui ne veut plus rien dire.
+ * Seule la première réponse de la journée compte.
+ *
+ * @param {string} cardId
+ * @param {boolean} success
+ * @param {ISODate} today
+ * @returns {{ counted: boolean, progress: CardProgress | null }}
+ */
+export function recordDailyReview(cardId, success, today) {
+  const stored = readDaily();
+  const alreadyCounted = stored !== null && stored.date === today && stored.reviewedCardIds.includes(cardId);
+  if (alreadyCounted) return { counted: false, progress: getProgress(cardId) };
+
+  const progress = recordReview(cardId, success, today);
+  if (progress === null) return { counted: false, progress: null };
+
+  const base = stored !== null && stored.date === today ? stored : { date: today, cardIds: [], reviewedCardIds: [] };
+  writeDaily({ ...base, reviewedCardIds: [...base.reviewedCardIds, cardId] });
+  return { counted: true, progress };
+}
+
+/**
+ * Cartes du jour déjà comptées pour le SRS — sert à afficher "entraînement"
+ * plutôt que de laisser croire que la progression avance encore.
+ * @param {ISODate} today
+ * @returns {string[]}
+ */
+export function getReviewedTodayCardIds(today) {
+  const stored = readDaily();
+  return stored !== null && stored.date === today ? stored.reviewedCardIds : [];
 }
