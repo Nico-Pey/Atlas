@@ -11,6 +11,7 @@ import { homeScreen } from './ui/home.js';
 import { lessonScreen } from './ui/lesson.js';
 import { progressScreen } from './ui/progress.js';
 import { quizScreen } from './ui/quiz.js';
+import { settingsScreen } from './ui/settings.js';
 
 const screenRoot = document.getElementById('screen');
 const tabsRoot = document.getElementById('tabs');
@@ -19,6 +20,7 @@ const TABS = [
   { route: '#/', label: 'Apprendre', icon: 'globe' },
   { route: '#/quiz', label: 'Quiz', icon: 'cards' },
   { route: '#/progression', label: 'Progression', icon: 'bars' },
+  { route: '#/reglages', label: 'Réglages', icon: 'sliders' },
 ];
 
 /**
@@ -26,7 +28,7 @@ const TABS = [
  * texte (donc le vert d'Atlas quand l'onglet est actif) et gardent le même
  * rendu sur tous les appareils.
  *
- * @param {'globe' | 'cards' | 'bars'} name
+ * @param {'globe' | 'cards' | 'bars' | 'sliders'} name
  * @returns {SVGElement}
  */
 function icon(name) {
@@ -56,6 +58,20 @@ function icon(name) {
     ]);
   }
 
+  if (name === 'sliders') {
+    // Des curseurs plutôt qu'une roue crantée : la roue demande une dizaine de
+    // dents, donc un tracé long et illisible dans le code, pour un dessin qui
+    // se brouille à 24 px. Deux curseurs disent la même chose en quatre traits.
+    return svg('svg', common, [
+      svg('path', { d: 'M4 8.5h9' }),
+      svg('circle', { cx: 16, cy: 8.5, r: 2.2 }),
+      svg('path', { d: 'M19 8.5h1' }),
+      svg('path', { d: 'M4 15.5h1' }),
+      svg('circle', { cx: 8, cy: 15.5, r: 2.2 }),
+      svg('path', { d: 'M11 15.5h9' }),
+    ]);
+  }
+
   return svg('svg', { ...common, fill: 'currentColor', stroke: 'none' }, [
     svg('rect', { x: 4, y: 13, width: 3.5, height: 7, rx: 1 }),
     svg('rect', { x: 10.25, y: 9, width: 3.5, height: 11, rx: 1 }),
@@ -78,6 +94,7 @@ function navigate(route) {
 function activeTabRoute(hash) {
   if (hash.startsWith('#/quiz')) return '#/quiz';
   if (hash.startsWith('#/progression')) return '#/progression';
+  if (hash.startsWith('#/reglages')) return '#/reglages';
   return '#/';
 }
 
@@ -111,7 +128,9 @@ function render() {
   } else if (hash.startsWith('#/quiz')) {
     screenRoot.appendChild(quizScreen());
   } else if (hash.startsWith('#/progression')) {
-    screenRoot.appendChild(progressScreen(navigate));
+    screenRoot.appendChild(progressScreen());
+  } else if (hash.startsWith('#/reglages')) {
+    screenRoot.appendChild(settingsScreen(navigate));
   } else {
     screenRoot.appendChild(homeScreen(navigate));
   }

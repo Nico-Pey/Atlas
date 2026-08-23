@@ -1,12 +1,14 @@
 /**
  * Écran de progression : où j'en suis, leçon par leçon.
  *
- * Comme les autres écrans, ne connaît aucune leçon en dur.
+ * Comme les autres écrans, ne connaît aucune leçon en dur. Écran purement
+ * consultatif : on vient y regarder ses statistiques, pas les modifier — la
+ * remise à zéro est dans Réglages (ui/settings.js).
  */
 
 import { themes } from '../data/themes.js';
 import { getPool } from '../engine/srs.js';
-import { getAllProgress, resetAllProgress } from '../storage/store.js';
+import { getAllProgress } from '../storage/store.js';
 import { el } from './dom.js';
 
 const ROWS = [
@@ -16,8 +18,8 @@ const ROWS = [
   { key: 'non_vue', label: 'Pas encore vues' },
 ];
 
-/** @param {(route: string) => void} navigate @returns {HTMLElement} */
-export function progressScreen(navigate) {
+/** @returns {HTMLElement} */
+export function progressScreen() {
   const progressByCardId = new Map(getAllProgress().map((p) => [p.cardId, p]));
 
   const lessonBlocks = themes.flatMap((theme) =>
@@ -47,19 +49,5 @@ export function progressScreen(navigate) {
   return el('section', { class: 'screen' }, [
     el('h1', { class: 'screen-title', text: 'Progression' }),
     ...lessonBlocks,
-
-    el('button', {
-      class: 'reset-button',
-      type: 'button',
-      text: 'Réinitialiser ma progression',
-      onClick: () => {
-        // `confirm` est volontairement utilisé ici : c'est une action
-        // destructrice et rare, une boîte native suffit.
-        if (window.confirm('Effacer toute la progression ? Cette action est définitive.')) {
-          resetAllProgress();
-          navigate('#/progression');
-        }
-      },
-    }),
   ]);
 }

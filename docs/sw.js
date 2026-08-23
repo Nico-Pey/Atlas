@@ -20,7 +20,7 @@
  * continueront de servir l'ancienne version depuis leur cache.
  */
 
-const CACHE_NAME = 'atlas-v9';
+const CACHE_NAME = 'atlas-v10';
 
 /** Chemins relatifs : fonctionne aussi bien à la racine que dans /Atlas/. */
 const ASSETS = [
@@ -44,6 +44,7 @@ const ASSETS = [
   './js/ui/lesson.js',
   './js/ui/progress.js',
   './js/ui/quiz.js',
+  './js/ui/settings.js',
 ];
 
 self.addEventListener('install', (event) => {
