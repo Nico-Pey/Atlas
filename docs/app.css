@@ -17,6 +17,11 @@
   --success: #1e7a3c;
   --danger: #b3261e;
   --separator: #d1d1d6;
+  /* Désigne le département sur lequel porte la question ("quel est CE
+     département ?"). Volontairement hors de la palette verte de la
+     progression : ce jaune ne veut rien dire d'autre que "c'est celui-là". */
+  --highlight: #f5c518;
+  --highlight-strong: #a97c00;
 
   --space-xs: 4px;
   --space-sm: 8px;
@@ -357,19 +362,8 @@ button {
   margin: 0 0 var(--space-md);
 }
 
-.quiz-prompt-shape {
-  display: flex;
-  justify-content: center;
-  margin-bottom: var(--space-md);
-}
-
-/* Sur la facette "placement", l'énoncé cohabite avec une carte : il passe en
-   petit format pour que la carte tienne à l'écran sans avoir à scroller au
-   moment de répondre. */
-.quiz-prompt-shape.quiz-prompt-compact .silhouette {
-  height: 110px;
-}
-
+/* Quand l'énoncé cohabite avec une carte, il passe en petit format pour que
+   la carte tienne à l'écran sans avoir à scroller au moment de répondre. */
 .quiz-prompt-text.quiz-prompt-compact {
   font-size: 30px;
   margin-bottom: var(--space-sm);
@@ -382,6 +376,49 @@ button {
 .quiz-question {
   font-size: 22px;
   font-weight: 600;
+  text-align: center;
+  margin: 0 0 var(--space-md);
+}
+
+/* Deuxième temps de la manche : les deux dernières informations, sur la même
+   page. Chaque bloc se verrouille dès qu'il est répondu, indépendamment de
+   l'autre. */
+.quiz-pair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.quiz-pair-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Bloc déjà répondu : atténué pour que l'œil aille droit à celui qui reste. */
+.quiz-pair-item-answered {
+  opacity: 0.6;
+}
+
+.quiz-pair-question {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+}
+
+/* Le nom du département, une fois trouvé (ou révélé) : il sert de contexte
+   aux deux questions suivantes, qui parlent de "lui". */
+.quiz-context {
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 var(--space-xs);
+}
+
+.quiz-context-wrong {
+  font-size: 15px;
+  color: var(--danger);
   text-align: center;
   margin: 0 0 var(--space-md);
 }
@@ -406,15 +443,6 @@ button {
 
 .quiz-practice-note {
   font-size: 13px;
-}
-
-/* La silhouette ne doit donner aucun indice de couleur : elle occupe une
-   zone de taille fixe, cadrée sur le seul département à deviner (voir
-   js/ui/carte.js § silhouette). */
-.silhouette {
-  width: 100%;
-  max-width: 220px;
-  height: 200px;
 }
 
 .quiz-choices {

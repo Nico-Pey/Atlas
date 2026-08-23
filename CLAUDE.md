@@ -11,7 +11,7 @@ qui utilise une répétition espacée simple.
 
 | | Où | État |
 |---|---|---|
-| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (40 vérifs) + 12 tests du moteur. Carte de France (13 régions) à l'accueil, les 96 départements ont du contenu (généré, voir `docs/README.md` § 6), quiz du jour plafonné à 10 cartes interrogées dans plusieurs sens, cache progressif. |
+| **PWA web** (recommandée) | `docs/` | ✅ testée en navigateur (39 vérifs) + 12 tests du moteur. Carte de France (13 régions) à l'accueil, les 96 départements ont du contenu (généré, voir `docs/README.md` § 6), quiz du jour plafonné à 10 cartes (nom du département d'abord, puis les 2 infos restantes), cache progressif. |
 | Expo / React Native | racine (`App.tsx`, `screens/`…) | compile, jamais lancée sur appareil |
 
 La **PWA est la voie retenue** : développement sous Windows, installation sur
@@ -91,6 +91,12 @@ Résumé :
    (on peut le refaire à l'identique), et **seule la première réponse de la
    journée** compte pour la progression — les passages suivants sont de
    l'entraînement.
+5. Une manche interroge la carte **en deux temps** : d'abord le **nom** du
+   département (à partir de son numéro, de son chef-lieu, ou de son
+   emplacement colorié sur la carte de sa région), puis les **deux
+   informations restantes** sur la même page. Se tromper au nom n'interrompt
+   pas la manche ; la carte n'est réussie que si les trois réponses sont
+   justes.
 
 ## État d'avancement
 

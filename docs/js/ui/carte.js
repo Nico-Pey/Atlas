@@ -1,6 +1,6 @@
 /**
  * Rendus cartographiques : carte de France (régions), carte d'une région
- * (départements), silhouette isolée d'un département (quiz).
+ * (départements) pour la leçon, et sa variante neutre pour le quiz.
  *
  * Les tracés viennent de docs/js/data/geo/france.json, généré par
  * tools/build-geo.mjs à partir des données IGN/INSEE (voir ce fichier et
@@ -335,27 +335,37 @@ function nearestDepartement(departements, point) {
  * @param {string} options.regionCode
  * @param {string | null} [options.revealCode]  Département à mettre en évidence (retour visuel après réponse).
  * @param {boolean} [options.revealIsCorrect]   Vert si vrai, rouge sinon.
- * @param {(code: string) => void} options.onSelect
+ * @param {string | null} [options.highlightCode]  Département désigné en jaune : sert d'énoncé
+ *   ("quel est CE département ?"), pas de retour visuel.
+ * @param {((code: string) => void) | null} [options.onSelect]  Absent = carte purement illustrative.
  * @returns {SVGElement}
  */
-export function cartePlacementDepartements({ geo, regionCode, revealCode = null, revealIsCorrect = true, onSelect }) {
+export function cartePlacementDepartements({
+  geo,
+  regionCode,
+  revealCode = null,
+  revealIsCorrect = true,
+  highlightCode = null,
+  onSelect = null,
+}) {
   const region = geo.regions.find((r) => r.code === regionCode);
   const departements = geo.departements.filter((d) => d.regionCode === regionCode);
+  const interactive = typeof onSelect === 'function';
 
   const root = svg('svg', {
     viewBox: region
       ? bboxToViewBox(padBbox(region.bbox, REGION_ZOOM_MARGIN))
       : `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
     class: 'carte',
-    role: 'group',
+    role: interactive ? 'group' : 'img',
     'aria-label': region ? `Départements de ${region.nom}` : 'Départements',
   });
 
   for (const dep of departements) {
     const group = svg('g', {
       class: 'carte-departement',
-      role: 'button',
-      tabindex: '0',
+      role: interactive ? 'button' : null,
+      tabindex: interactive ? '0' : null,
       'data-code': dep.code,
       'aria-label': dep.nom,
     });
@@ -370,17 +380,36 @@ export function cartePlacementDepartements({ geo, regionCode, revealCode = null,
       }),
     );
 
-    group.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onSelect(dep.code);
-      }
-    });
+    if (interactive) {
+      group.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(dep.code);
+        }
+      });
+    }
 
     root.appendChild(group);
   }
 
-  attachDepartementTapHandler(root, departements, onSelect);
+  if (interactive) attachDepartementTapHandler(root, departements, onSelect);
+
+  // Le département désigné par l'énoncé, en jaune. Redessiné par-dessus tout
+  // le reste pour que son contour soit complet (deux voisins partagent une
+  // frontière : le dernier dessiné recouvre le trait de l'autre).
+  const highlighted = departements.find((d) => d.code === highlightCode);
+  if (highlighted) {
+    root.appendChild(
+      svg('path', {
+        d: highlighted.path,
+        fill: 'var(--highlight)',
+        stroke: 'var(--highlight-strong)',
+        'stroke-width': 2,
+        'stroke-linejoin': 'round',
+        'pointer-events': 'none',
+      }),
+    );
+  }
 
   const revealed = departements.find((d) => d.code === revealCode);
   if (revealed) {
@@ -398,58 +427,4 @@ export function cartePlacementDepartements({ geo, regionCode, revealCode = null,
   }
 
   return root;
-}
-
-/**
- * Marge autour d'une silhouette, en fraction de la plus grande dimension du
- * département (avec un plancher pour les tout petits). Proportionnelle et
- * non fixe : une marge fixe cadrait très large un petit département et très
- * serré un grand.
- */
-const SILHOUETTE_MARGIN_RATIO = 0.12;
-const SILHOUETTE_MIN_MARGIN = 1.5;
-
-/**
- * Épaisseur du trait, en fraction du cadre. Le viewBox d'une silhouette est
- * calé sur le département lui-même : son échelle change donc du tout au tout
- * d'un département à l'autre, et une épaisseur fixe donnait un trait ~3,5×
- * plus épais sur Paris (13,5 % du cadre) que sur la Gironde (3,8 %) —
- * au point de manger la forme à deviner. En fraction du cadre, tous les
- * départements ont le même rendu à l'écran.
- */
-const SILHOUETTE_STROKE_RATIO = 0.035;
-
-/**
- * Silhouette d'un seul département, isolée et sans contexte — utilisée par
- * le quiz pour le faire deviner par sa forme. Aucune couleur ne dépend du
- * statut SRS ici : la carte ne doit donner aucun indice.
- *
- * @param {import('../data/geo.js').DepartementGeo} depGeo
- * @returns {SVGElement}
- */
-export function silhouette(depGeo) {
-  const [minX, minY, maxX, maxY] = depGeo.bbox;
-  const longestSide = Math.max(maxX - minX, maxY - minY);
-  const margin = Math.max(longestSide * SILHOUETTE_MARGIN_RATIO, SILHOUETTE_MIN_MARGIN);
-  const framedBbox = padBbox(depGeo.bbox, margin);
-  const frameSize = Math.max(framedBbox[2] - framedBbox[0], framedBbox[3] - framedBbox[1]);
-
-  return svg(
-    'svg',
-    {
-      viewBox: bboxToViewBox(framedBbox),
-      class: 'silhouette',
-      role: 'img',
-      'aria-label': 'Contour du département à deviner',
-    },
-    [
-      svg('path', {
-        d: depGeo.path,
-        fill: 'var(--surface)',
-        stroke: 'var(--accent)',
-        'stroke-width': frameSize * SILHOUETTE_STROKE_RATIO,
-        'stroke-linejoin': 'round',
-      }),
-    ],
-  );
 }

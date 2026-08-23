@@ -78,13 +78,23 @@ que mesure une répétition espacée.
 
 ## Ce qu'une "réussite" veut dire côté quiz
 
-Le quiz interroge chaque département sous **2 facettes** tirées au sort
-(nom, numéro, préfecture, ou placement sur la carte). La carte n'est comptée
-comme réussie que si **les deux facettes** sont correctes ; une seule erreur
-suffit à compter la manche comme un échec (retour dès le lendemain).
+Une manche interroge un département sur ses **quatre informations** — nom,
+numéro, chef-lieu, emplacement sur la carte — en **deux temps** :
 
-Le SRS n'est mis à jour **qu'à la fin de la manche**, jamais facette par
-facette : une carte = une réponse SRS par jour, quel que soit le nombre de
+1. **Le nom, toujours.** L'indice de départ est tiré au sort parmi les trois
+   autres informations : le numéro, le chef-lieu, ou l'emplacement (la carte
+   de la région avec le département colorié).
+2. **Les deux informations restantes**, posées sur la même page : exactement
+   celles que le temps 1 n'a pas déjà données.
+
+Se tromper au temps 1 **n'interrompt pas la manche** : le bon nom est révélé
+et sert de contexte, les deux questions suivantes sont quand même posées. La
+carte n'est comptée comme réussie que si **les trois réponses** sont
+correctes ; une seule erreur suffit à compter la manche comme un échec
+(retour dès le lendemain).
+
+Le SRS n'est mis à jour **qu'à la fin de la manche**, jamais question par
+question : une carte = une réponse SRS par jour, quel que soit le nombre de
 questions posées dessus.
 
 ## Ce que ce module ne fait PAS

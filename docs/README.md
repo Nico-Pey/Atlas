@@ -8,7 +8,7 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + une quarantaine de vérifications dans un navigateur
+12 tests du moteur + 39 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
@@ -25,12 +25,27 @@ l'entraînement — seule la première réponse de la journée compte pour la
 progression), et il se renouvelle le lendemain.
 
 Chaque département est interrogé **dans plusieurs sens**, pour éviter de
-toujours réciter la même chose dans la même direction. Une manche part d'un
-énoncé tiré au sort — le numéro, le nom, ou la silhouette du département —
-puis pose 2 questions parmi celles que l'énoncé n'a pas déjà données : son
-nom, son numéro, sa préfecture, ou son placement sur la carte (on désigne
-d'abord la région, puis le département à l'intérieur). Les deux réponses
-doivent être justes pour que la carte compte comme réussie.
+toujours réciter la même chose dans la même direction. Une manche se joue en
+deux temps :
+
+1. **Trouver le nom du département**, toujours. L'indice de départ est tiré au
+   sort parmi trois : son **numéro** (« 33 »), son **chef-lieu**
+   (« Bordeaux »), ou son **emplacement** — la carte de sa région avec lui
+   colorié en jaune.
+2. **Les deux informations restantes, sur la même page.** Ce sont exactement
+   celles que le temps 1 n'a pas données : si l'indice était le numéro, on
+   demande l'emplacement et le chef-lieu ; s'il était l'emplacement, on
+   demande le numéro et le chef-lieu, etc. « Placer sur la carte » se fait en
+   deux touchers : d'abord la région, puis le département à l'intérieur.
+
+Se tromper au temps 1 **n'interrompt pas la manche** : le bon nom s'affiche et
+sert de contexte aux deux questions suivantes, qu'on répond quand même. La
+carte ne compte comme réussie que si **les trois** réponses sont justes.
+
+> Il n'y a volontairement plus de question « reconnais ce contour » : la forme
+> d'un département suffit à le replacer sur la carte sans rien savoir de lui,
+> ce qui rendait la question de placement gratuite. L'énoncé « emplacement »
+> la remplace — il montre où il est, et demande son nom.
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.
@@ -219,10 +234,10 @@ docs/
     engine/            Moteur SRS PUR : ni DOM, ni stockage, ni horloge.
     storage/store.js   Seul module qui touche au stockage du navigateur.
     ui/
-      carte.js           Rendus cartographiques (France, région, silhouette).
+      carte.js           Rendus cartographiques (France, région, carte d'énoncé).
       home.js            Accueil : carte de France, une région = un point d'entrée.
       lesson.js          Leçon : carte d'une région + fiche département.
-      quiz.js             Quiz : silhouette puis préfecture, à choix multiples.
+      quiz.js             Quiz : le nom d'abord, puis les 2 infos restantes.
       progress.js         Statistiques de progression.
       dom.js              Micro-outils de construction d'éléments HTML/SVG.
     app.js             Routage par ancre + barre d'onglets.
