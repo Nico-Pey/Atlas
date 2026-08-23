@@ -8,7 +8,7 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 39 vérifications dans un navigateur
+12 tests du moteur + 53 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
@@ -41,6 +41,11 @@ deux temps :
 Se tromper au temps 1 **n'interrompt pas la manche** : le bon nom s'affiche et
 sert de contexte aux deux questions suivantes, qu'on répond quand même. La
 carte ne compte comme réussie que si **les trois** réponses sont justes.
+
+Sur les questions de placement, le retour visuel montre **deux** formes : celle
+qu'on a touchée en **rouge**, et la bonne réponse en **vert**. Afficher la
+seule bonne réponse ne suffisait pas — on ne savait pas où on avait touché,
+d'autant que le tap est rattrapé vers le département le plus proche (§ 4).
 
 > Il n'y a volontairement plus de question « reconnais ce contour » : la forme
 > d'un département suffit à le replacer sur la carte sans rien savoir de lui,

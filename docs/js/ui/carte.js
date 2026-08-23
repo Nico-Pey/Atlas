@@ -20,16 +20,24 @@ import { svg } from './dom.js';
  * @param {object} options
  * @param {import('../data/geo.js').FranceGeo} options.geo
  * @param {Set<string>} options.activeRegionCodes  Régions qui ont du contenu.
- * @param {string | null} [options.revealCode]   Région à mettre en évidence (retour visuel du quiz).
- * @param {boolean} [options.revealIsCorrect]    Vert si vrai, rouge sinon.
- * @param {(regionCode: string) => void} options.onSelect
+ * @param {string | null} [options.correctCode]  Bonne réponse, en vert (retour visuel du quiz).
+ * @param {string | null} [options.pickedCode]   Région touchée, en rouge si elle n'est pas la bonne.
+ * @param {((regionCode: string) => void) | null} [options.onSelect]  Absent = carte non cliquable.
  * @returns {SVGElement}
  */
-export function carteRegions({ geo, activeRegionCodes, revealCode = null, revealIsCorrect = true, onSelect }) {
+export function carteRegions({
+  geo,
+  activeRegionCodes,
+  correctCode = null,
+  pickedCode = null,
+  onSelect = null,
+}) {
+  const interactive = typeof onSelect === 'function';
+
   const root = svg('svg', {
     viewBox: `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
     class: 'carte',
-    role: 'group',
+    role: interactive ? 'group' : 'img',
     'aria-label': 'Carte des régions de France',
   });
 
@@ -37,8 +45,8 @@ export function carteRegions({ geo, activeRegionCodes, revealCode = null, reveal
     const isActive = activeRegionCodes.has(region.code);
     const group = svg('g', {
       class: isActive ? 'carte-region carte-region-active' : 'carte-region carte-region-inactive',
-      role: 'button',
-      tabindex: '0',
+      role: interactive ? 'button' : null,
+      tabindex: interactive ? '0' : null,
       'aria-label': region.nom + (isActive ? '' : ' (bientôt disponible)'),
     });
 
@@ -53,36 +61,65 @@ export function carteRegions({ geo, activeRegionCodes, revealCode = null, reveal
       }),
     );
 
-    group.addEventListener('click', () => onSelect(region.code));
-    group.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onSelect(region.code);
-      }
-    });
+    if (interactive) {
+      group.addEventListener('click', () => onSelect(region.code));
+      group.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(region.code);
+        }
+      });
+    }
 
     root.appendChild(group);
   }
 
-  // Mise en évidence redessinée par-dessus tout le reste : deux régions
-  // voisines partagent une frontière, et celle dessinée en dernier peint son
-  // trait par-dessus l'autre (même raison que pour les départements).
-  const revealed = geo.regions.find((r) => r.code === revealCode);
-  if (revealed) {
+  appendReveal(root, geo.regions, { correctCode, pickedCode, fillOpacity: 0.3, strokeWidth: 2 });
+
+  return root;
+}
+
+/**
+ * Retour visuel d'une réponse donnée sur une carte : la forme **touchée** en
+ * rouge (seulement si elle est fausse — inutile de la peindre deux fois quand
+ * c'est la bonne) et la **bonne réponse** en vert.
+ *
+ * Montrer les deux est le seul moyen de comprendre son erreur : avec la seule
+ * bonne réponse affichée, on ne sait pas où on a touché — d'autant que le tap
+ * est rattrapé vers le département le plus proche (voir
+ * attachDepartementTapHandler), donc la forme retenue n'est pas forcément
+ * celle qu'on visait.
+ *
+ * Les deux sont redessinées par-dessus tout le reste : deux formes voisines
+ * partagent une frontière, et la dernière dessinée peint son trait par-dessus
+ * celui de l'autre. Le vert passe en dernier, pour que la bonne réponse ait
+ * toujours un contour complet.
+ *
+ * @param {SVGElement} root
+ * @param {{code: string, path: string}[]} shapes  Régions ou départements affichés.
+ * @param {{correctCode: string | null, pickedCode: string | null, fillOpacity: number, strokeWidth: number}} options
+ */
+function appendReveal(root, shapes, { correctCode, pickedCode, fillOpacity, strokeWidth }) {
+  const wrong = pickedCode && pickedCode !== correctCode ? shapes.find((s) => s.code === pickedCode) : null;
+  const right = correctCode ? shapes.find((s) => s.code === correctCode) : null;
+
+  for (const [shape, color] of [
+    [wrong, 'var(--danger)'],
+    [right, 'var(--success)'],
+  ]) {
+    if (!shape) continue;
     root.appendChild(
       svg('path', {
-        d: revealed.path,
-        fill: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
-        'fill-opacity': 0.3,
-        stroke: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
-        'stroke-width': 2,
+        d: shape.path,
+        fill: color,
+        'fill-opacity': fillOpacity,
+        stroke: color,
+        'stroke-width': strokeWidth,
         'stroke-linejoin': 'round',
         'pointer-events': 'none',
       }),
     );
   }
-
-  return root;
 }
 
 /**
@@ -333,8 +370,8 @@ function nearestDepartement(departements, point) {
  * @param {object} options
  * @param {import('../data/geo.js').FranceGeo} options.geo
  * @param {string} options.regionCode
- * @param {string | null} [options.revealCode]  Département à mettre en évidence (retour visuel après réponse).
- * @param {boolean} [options.revealIsCorrect]   Vert si vrai, rouge sinon.
+ * @param {string | null} [options.correctCode]  Bonne réponse, en vert (retour visuel après réponse).
+ * @param {string | null} [options.pickedCode]   Département touché, en rouge s'il n'est pas le bon.
  * @param {string | null} [options.highlightCode]  Département désigné en jaune : sert d'énoncé
  *   ("quel est CE département ?"), pas de retour visuel.
  * @param {((code: string) => void) | null} [options.onSelect]  Absent = carte purement illustrative.
@@ -343,8 +380,8 @@ function nearestDepartement(departements, point) {
 export function cartePlacementDepartements({
   geo,
   regionCode,
-  revealCode = null,
-  revealIsCorrect = true,
+  correctCode = null,
+  pickedCode = null,
   highlightCode = null,
   onSelect = null,
 }) {
@@ -411,20 +448,7 @@ export function cartePlacementDepartements({
     );
   }
 
-  const revealed = departements.find((d) => d.code === revealCode);
-  if (revealed) {
-    root.appendChild(
-      svg('path', {
-        d: revealed.path,
-        fill: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
-        'fill-opacity': 0.35,
-        stroke: revealIsCorrect ? 'var(--success)' : 'var(--danger)',
-        'stroke-width': 2.5,
-        'stroke-linejoin': 'round',
-        'pointer-events': 'none',
-      }),
-    );
-  }
+  appendReveal(root, departements, { correctCode, pickedCode, fillOpacity: 0.35, strokeWidth: 2.5 });
 
   return root;
 }

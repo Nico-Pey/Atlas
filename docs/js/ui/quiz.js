@@ -24,6 +24,9 @@
  *    apprend aussi en se trompant). La manche ne compte comme réussie que si
  *    les trois réponses sont bonnes.
  *
+ *    Même logique pour le retour visuel des questions sur la carte : on voit
+ *    à la fois la forme touchée (rouge) et la bonne réponse (vert).
+ *
  * Pourquoi il n'y a plus de question sur la silhouette : quand l'énoncé
  * était le contour du département, la question "place-le sur la carte" se
  * résolvait en comparant les formes, sans rien connaître. L'énoncé
@@ -38,10 +41,23 @@ import { getDailyCardIds, getReviewedTodayCardIds, recordDailyReview } from '../
 import { carteRegions, cartePlacementDepartements } from './carte.js';
 import { clear, el } from './dom.js';
 
-/** Le temps de voir le retour (vert/rouge) avant de passer à la suite. */
-const FEEDBACK_DELAY_MS = 1100;
+/**
+ * Temps d'affichage du retour vert/rouge avant de passer à la suite.
+ *
+ * Ce n'est **pas** un temps de calcul — tout est déjà en mémoire, la réponse
+ * est connue à l'instant du tap : c'est une pause volontaire, pour qu'on ait
+ * le temps de voir la couleur. D'où deux durées : quand c'est juste il n'y a
+ * rien à apprendre, on enchaîne vite ; quand c'est faux il faut le temps de
+ * lire la bonne réponse.
+ */
+const FEEDBACK_DELAY_MS = { correct: 450, wrong: 1000 };
 /** Un peu plus long sur la carte : la zone à regarder est plus large qu'un bouton. */
-const MAP_FEEDBACK_DELAY_MS = 1600;
+const MAP_FEEDBACK_DELAY_MS = { correct: 650, wrong: 1400 };
+
+/** @param {boolean} success @param {{correct: number, wrong: number}} delays */
+function feedbackDelay(success, delays) {
+  return success ? delays.correct : delays.wrong;
+}
 
 /** Énoncés possibles. Le nom, lui, n'est jamais un énoncé : c'est la question du temps 1. */
 const PROMPTS = ['numero', 'emplacement', 'chefLieu'];
@@ -161,7 +177,7 @@ export function quizScreen() {
           answering = false;
           phase = 'paire';
           render();
-        }, FEEDBACK_DELAY_MS);
+        }, feedbackDelay(success, FEEDBACK_DELAY_MS));
       }),
     );
   }
@@ -228,7 +244,7 @@ export function quizScreen() {
             window.setTimeout(() => {
               answering = false;
               afterPairAnswer();
-            }, FEEDBACK_DELAY_MS);
+            }, feedbackDelay(success, FEEDBACK_DELAY_MS));
           },
           state,
         ),
@@ -252,53 +268,62 @@ export function quizScreen() {
     else render();
   }
 
-  /** Placement : carte de France (région), puis carte de la région (département). */
+  /**
+   * Placement : carte de France (choisir la région), puis carte de la région
+   * (choisir le département).
+   *
+   * Le retour visuel montre **deux** formes : celle qu'on a touchée en rouge
+   * et la bonne en vert (voir appendReveal dans carte.js). Ne montrer que la
+   * bonne réponse ne disait pas où on s'était trompé — et comme un tap est
+   * rattrapé vers le département le plus proche, on ne pouvait même pas
+   * savoir quelle forme avait été retenue.
+   */
   function placementBlock(round, state) {
     const wrap = el('div', { class: 'carte-slot quiz-placement' });
+    const reveal = state.reveal;
 
-    if (state.answered) {
-      // Verrouillé : on garde la dernière carte affichée avec son retour visuel.
-      wrap.appendChild(
-        cartePlacementDepartements({
-          geo,
-          regionCode: round.dep.regionCode,
-          revealCode: round.dep.code,
-          revealIsCorrect: state.correct,
-        }),
-      );
-      return wrap;
-    }
+    // Quelle carte afficher : celle du retour visuel s'il y en a un — y
+    // compris une fois la question répondue, puisque c'est là que se lit
+    // l'erreur — sinon celle de l'étape en cours.
+    const scope = reveal ? reveal.scope : state.step;
 
-    if (state.step === 'region') {
+    if (scope === 'region') {
       wrap.appendChild(
         carteRegions({
           geo,
           // Toutes les régions sont cliquables : n'en proposer qu'une partie
           // reviendrait à souffler la réponse.
           activeRegionCodes: new Set(geo.regions.map((r) => r.code)),
-          revealCode: state.reveal ? state.reveal.code : null,
-          revealIsCorrect: state.reveal ? state.reveal.isCorrect : true,
-          onSelect: (regionCode) => {
-            if (answering) return;
-            answering = true;
+          correctCode: reveal ? reveal.correct : null,
+          pickedCode: reveal ? reveal.picked : null,
+          onSelect: state.answered
+            ? null
+            : (regionCode) => {
+                if (answering) return;
+                answering = true;
 
-            const success = regionCode === round.dep.regionCode;
-            state.reveal = { code: success ? regionCode : round.dep.regionCode, isCorrect: success };
-            render();
-
-            window.setTimeout(() => {
-              state.reveal = null;
-              answering = false;
-              if (success) {
-                state.step = 'departement';
+                const success = regionCode === round.dep.regionCode;
+                state.reveal = { scope: 'region', correct: round.dep.regionCode, picked: regionCode };
                 render();
-              } else {
-                state.answered = true;
-                state.correct = false;
-                afterPairAnswer();
-              }
-            }, MAP_FEEDBACK_DELAY_MS);
-          },
+
+                window.setTimeout(() => {
+                  answering = false;
+                  if (success) {
+                    // Bonne région : on efface le retour visuel et on
+                    // enchaîne sur ses départements.
+                    state.reveal = null;
+                    state.step = 'departement';
+                    render();
+                  } else {
+                    // Mauvaise région : la question s'arrête là. On garde
+                    // state.reveal pour que la carte reste affichée avec le
+                    // rouge et le vert tant que l'autre question est ouverte.
+                    state.answered = true;
+                    state.correct = false;
+                    afterPairAnswer();
+                  }
+                }, feedbackDelay(success, MAP_FEEDBACK_DELAY_MS));
+              },
         }),
       );
       return wrap;
@@ -308,23 +333,25 @@ export function quizScreen() {
       cartePlacementDepartements({
         geo,
         regionCode: round.dep.regionCode,
-        revealCode: state.reveal ? state.reveal.code : null,
-        revealIsCorrect: state.reveal ? state.reveal.isCorrect : true,
-        onSelect: (code) => {
-          if (answering) return;
-          answering = true;
+        correctCode: reveal ? reveal.correct : null,
+        pickedCode: reveal ? reveal.picked : null,
+        onSelect: state.answered
+          ? null
+          : (code) => {
+              if (answering) return;
+              answering = true;
 
-          const success = code === round.dep.code;
-          state.reveal = { code: success ? code : round.dep.code, isCorrect: success };
-          render();
+              const success = code === round.dep.code;
+              state.reveal = { scope: 'departement', correct: round.dep.code, picked: code };
+              render();
 
-          window.setTimeout(() => {
-            answering = false;
-            state.answered = true;
-            state.correct = success;
-            afterPairAnswer();
-          }, MAP_FEEDBACK_DELAY_MS);
-        },
+              window.setTimeout(() => {
+                answering = false;
+                state.answered = true;
+                state.correct = success;
+                afterPairAnswer();
+              }, feedbackDelay(success, MAP_FEEDBACK_DELAY_MS));
+            },
       }),
     );
     return wrap;
