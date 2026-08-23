@@ -288,8 +288,24 @@ function nearestDepartement(departements, point) {
   return bestScore <= TAP_TOLERANCE_RADII ? best : null;
 }
 
-/** Marge (en unités de viewBox) laissée autour d'une silhouette isolée. */
-const SILHOUETTE_MARGIN = 6;
+/**
+ * Marge autour d'une silhouette, en fraction de la plus grande dimension du
+ * département (avec un plancher pour les tout petits). Proportionnelle et
+ * non fixe : une marge fixe cadrait très large un petit département et très
+ * serré un grand.
+ */
+const SILHOUETTE_MARGIN_RATIO = 0.12;
+const SILHOUETTE_MIN_MARGIN = 1.5;
+
+/**
+ * Épaisseur du trait, en fraction du cadre. Le viewBox d'une silhouette est
+ * calé sur le département lui-même : son échelle change donc du tout au tout
+ * d'un département à l'autre, et une épaisseur fixe donnait un trait ~3,5×
+ * plus épais sur Paris (13,5 % du cadre) que sur la Gironde (3,8 %) —
+ * au point de manger la forme à deviner. En fraction du cadre, tous les
+ * départements ont le même rendu à l'écran.
+ */
+const SILHOUETTE_STROKE_RATIO = 0.035;
 
 /**
  * Silhouette d'un seul département, isolée et sans contexte — utilisée par
@@ -300,10 +316,16 @@ const SILHOUETTE_MARGIN = 6;
  * @returns {SVGElement}
  */
 export function silhouette(depGeo) {
+  const [minX, minY, maxX, maxY] = depGeo.bbox;
+  const longestSide = Math.max(maxX - minX, maxY - minY);
+  const margin = Math.max(longestSide * SILHOUETTE_MARGIN_RATIO, SILHOUETTE_MIN_MARGIN);
+  const framedBbox = padBbox(depGeo.bbox, margin);
+  const frameSize = Math.max(framedBbox[2] - framedBbox[0], framedBbox[3] - framedBbox[1]);
+
   return svg(
     'svg',
     {
-      viewBox: bboxToViewBox(padBbox(depGeo.bbox, SILHOUETTE_MARGIN)),
+      viewBox: bboxToViewBox(framedBbox),
       class: 'silhouette',
       role: 'img',
       'aria-label': 'Contour du département à deviner',
@@ -313,7 +335,7 @@ export function silhouette(depGeo) {
         d: depGeo.path,
         fill: 'var(--surface)',
         stroke: 'var(--accent)',
-        'stroke-width': 2.5,
+        'stroke-width': frameSize * SILHOUETTE_STROKE_RATIO,
         'stroke-linejoin': 'round',
       }),
     ],
