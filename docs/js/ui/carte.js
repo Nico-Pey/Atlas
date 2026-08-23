@@ -20,6 +20,8 @@ import { svg } from './dom.js';
  * @param {object} options
  * @param {import('../data/geo.js').FranceGeo} options.geo
  * @param {Set<string>} options.activeRegionCodes  Régions qui ont du contenu.
+ * @param {Record<string, number>} [options.progressByRegion]  Avancement par région, de 0
+ *   (jamais visitée → gris) à 1 (tous ses départements connus → vert plein).
  * @param {string | null} [options.correctCode]  Bonne réponse, en vert (retour visuel du quiz).
  * @param {string | null} [options.pickedCode]   Région touchée, en rouge si elle n'est pas la bonne.
  * @param {((regionCode: string) => void) | null} [options.onSelect]  Absent = carte non cliquable.
@@ -28,11 +30,13 @@ import { svg } from './dom.js';
 export function carteRegions({
   geo,
   activeRegionCodes,
+  progressByRegion = {},
   correctCode = null,
   pickedCode = null,
   onSelect = null,
 }) {
   const interactive = typeof onSelect === 'function';
+  const mapHeight = geo.viewBox.height;
 
   const root = svg('svg', {
     viewBox: `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
@@ -43,6 +47,13 @@ export function carteRegions({
 
   for (const region of geo.regions) {
     const isActive = activeRegionCodes.has(region.code);
+    // Même code visuel que les départements dans une leçon : gris tant qu'on
+    // n'y a pas mis les pieds, vert de plus en plus franc à mesure qu'on les
+    // apprend. La carte de France devient ainsi une carte d'avancement, au
+    // lieu d'être verte partout dès le premier lancement.
+    const progress = progressByRegion[region.code] ?? 0;
+    const visited = progress > 0;
+
     const group = svg('g', {
       class: isActive ? 'carte-region carte-region-active' : 'carte-region carte-region-inactive',
       role: interactive ? 'button' : null,
@@ -53,10 +64,13 @@ export function carteRegions({
     group.appendChild(
       svg('path', {
         d: region.path,
-        fill: isActive ? 'var(--accent)' : 'var(--surface)',
-        'fill-opacity': isActive ? 0.16 : 1,
-        stroke: isActive ? 'var(--accent)' : 'var(--separator)',
-        'stroke-width': 1,
+        // Fond neutre plein quand la région n'a jamais été visitée : une
+        // opacité nulle sur la couleur d'accent laisserait voir le fond de
+        // la page (même raison que pour les départements).
+        fill: visited ? 'var(--accent)' : 'var(--surface)',
+        'fill-opacity': visited ? regionFillOpacity(progress) : 1,
+        stroke: visited ? 'var(--accent)' : 'var(--separator)',
+        'stroke-width': mapHeight * BORDER_RATIO,
         'stroke-linejoin': 'round',
       }),
     );
@@ -74,9 +88,27 @@ export function carteRegions({
     root.appendChild(group);
   }
 
-  appendReveal(root, geo.regions, { correctCode, pickedCode, fillOpacity: 0.3, strokeWidth: 2 });
+  appendReveal(root, geo.regions, {
+    correctCode,
+    pickedCode,
+    fillOpacity: 0.3,
+    strokeWidth: mapHeight * ACCENT_BORDER_RATIO,
+  });
 
   return root;
+}
+
+/**
+ * Opacité minimale d'une région déjà visitée. Sans ce plancher, une région
+ * dont une seule carte sur douze a été vue serait à peine distinguable du
+ * gris "jamais visitée" — or c'est précisément ce qu'on veut voir d'un coup
+ * d'œil depuis l'accueil.
+ */
+const REGION_MIN_OPACITY = 0.18;
+
+/** @param {number} progress Avancement de 0 à 1. @returns {number} */
+function regionFillOpacity(progress) {
+  return REGION_MIN_OPACITY + (1 - REGION_MIN_OPACITY) * clamp(progress, 0, 1);
 }
 
 /**
@@ -138,6 +170,21 @@ export const OPACITY_BY_STATUS = {
 const REGION_ZOOM_MARGIN = 10;
 
 /**
+ * Épaisseur des traits, en fraction de la HAUTEUR de la carte affichée.
+ *
+ * Même raison que pour les points de préfecture : une épaisseur exprimée
+ * directement en unités de projection change d'aspect selon le zoom. Le
+ * viewBox de l'Île-de-France fait ~64 unités de haut contre ~193 pour la
+ * Nouvelle-Aquitaine : un trait de 1 unité y faisait donc ~5,5 px à l'écran
+ * contre 1,8 ailleurs, et les bordures noyaient complètement la petite
+ * couronne. Exprimées en fraction de la hauteur, elles font la même épaisseur
+ * partout (le SVG a une hauteur fixée en CSS, la largeur suit).
+ */
+const BORDER_RATIO = 0.0035;
+/** Traits qui doivent ressortir : sélection, mise en évidence, retour du quiz. */
+const ACCENT_BORDER_RATIO = 0.0085;
+
+/**
  * À quel point on tolère un tap "à côté" d'un département, en multiples de
  * son propre rayon (demi-diagonale de sa boîte englobante). Sert de filet de
  * sécurité pour les petits départements collés les uns aux autres (Paris et
@@ -167,9 +214,11 @@ const MIN_HALF_DIAGONAL = 3;
 export function carteDepartements({ geo, regionCode, status, selectedMapId, onSelect }) {
   const region = geo.regions.find((r) => r.code === regionCode);
   const departements = geo.departements.filter((d) => d.regionCode === regionCode);
+  const bbox = region ? padBbox(region.bbox, REGION_ZOOM_MARGIN) : [0, 0, geo.viewBox.width, geo.viewBox.height];
+  const mapHeight = bbox[3] - bbox[1];
 
   const root = svg('svg', {
-    viewBox: region ? bboxToViewBox(padBbox(region.bbox, REGION_ZOOM_MARGIN)) : `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
+    viewBox: bboxToViewBox(bbox),
     class: 'carte',
     role: 'group',
     'aria-label': region ? `Carte des départements de ${region.nom}` : 'Carte des départements',
@@ -206,7 +255,7 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
         // contour complet du département sélectionné est redessiné une
         // seule fois, par-dessus tout le reste, juste après cette boucle.
         stroke: 'var(--separator)',
-        'stroke-width': 1,
+        'stroke-width': mapHeight * BORDER_RATIO,
         'stroke-linejoin': 'round',
       }),
     );
@@ -238,7 +287,7 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
         d: selectedDep.path,
         fill: 'none',
         stroke: 'var(--accent)',
-        'stroke-width': 2.5,
+        'stroke-width': mapHeight * ACCENT_BORDER_RATIO,
         'stroke-linejoin': 'round',
         'pointer-events': 'none',
       }),
@@ -249,7 +298,7 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
     const depStatus = status[dep.code] ?? 'non_vue';
     if (depStatus === 'non_vue' || !dep.prefecture) continue; // pas encore appris : pas de point à révéler
 
-    const radius = prefectureMarkerRadius(dep, dep.code === selectedMapId);
+    const radius = prefectureMarkerRadius(mapHeight, dep.code === selectedMapId);
 
     root.appendChild(
       svg('circle', {
@@ -257,11 +306,14 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
         cx: dep.prefecture.x,
         cy: dep.prefecture.y,
         r: radius,
+        // Centre blanc plutôt qu'un disque plein : le point doit rester
+        // lisible aussi bien sur un département gris que sur un vert foncé
+        // (« connue »), où un disque de la couleur d'accent disparaîtrait.
         fill: '#ffffff',
         stroke: 'var(--accent)',
-        // Un trait fin proportionné au cercle : à ce rayon, 1.5 (la valeur
-        // fixe d'avant) ferait un anneau épais et grossier.
-        'stroke-width': Math.max(radius * 0.35, 0.6),
+        // Anneau fin : à ce rayon, un trait plus épais transformerait le
+        // repère en pastille et masquerait les petits départements.
+        'stroke-width': radius * 0.3,
         'pointer-events': 'none',
       }),
     );
@@ -270,25 +322,37 @@ export function carteDepartements({ geo, regionCode, status, selectedMapId, onSe
   return root;
 }
 
-/** Rayons min/max (unités de viewBox) du point de préfecture. */
-const PREFECTURE_MARKER_MIN_RADIUS = 0.9;
-const PREFECTURE_MARKER_MAX_RADIUS = 3;
+/**
+ * Rayon d'un point de préfecture, en fraction de la HAUTEUR de la carte
+ * affichée.
+ *
+ * Le SVG a une hauteur fixée en CSS (`.carte { height: min(46vh, 400px) }`)
+ * et une largeur qui suit : une fraction de la hauteur du viewBox donne donc
+ * toujours le même diamètre à l'écran, quelle que soit la région. À 350 px de
+ * haut, ça fait un point d'environ 9 px — un repère de ville lisible, qui ne
+ * mange pas la carte.
+ */
+const PREFECTURE_MARKER_RADIUS_RATIO = 0.013;
 /** Multiplicateur appliqué au rayon du département sélectionné. */
-const PREFECTURE_MARKER_SELECTED_FACTOR = 1.4;
+const PREFECTURE_MARKER_SELECTED_FACTOR = 1.35;
 
 /**
- * Rayon du point de préfecture, proportionné à la taille du département —
- * un rayon fixe engloutissait complètement les petits départements (Paris
- * ne fait que ~3.4 unités de haut ; un rayon fixe de 3, soit un diamètre de
- * 6, dépassait sa propre forme). On le limite à une fraction de sa plus
- * petite dimension, borné pour rester visible sur un très petit département
- * et raisonnable sur un très grand.
+ * Rayon du point de préfecture — **le même pour tous les départements d'une
+ * carte**, seul celui du département sélectionné est légèrement grossi.
+ *
+ * Il était auparavant proportionné à la taille de chaque département. Le point
+ * changeait donc de taille d'un département à l'autre (en Île-de-France, celui
+ * de la Seine-et-Marne faisait plus de trois fois celui de Paris), ce qui se
+ * lisait comme une information alors que ça n'en était pas une, et les gros
+ * anneaux recouvraient la petite couronne. Un point est un repère de ville :
+ * une ville n'est pas "plus grande" parce que son département l'est.
+ *
+ * @param {number} mapHeight Hauteur du viewBox de la carte, en unités de projection.
+ * @param {boolean} isSelected
  */
-function prefectureMarkerRadius(dep, isSelected) {
-  const [minX, minY, maxX, maxY] = dep.bbox;
-  const smallestSide = Math.min(maxX - minX, maxY - minY);
-  const radius = clamp(smallestSide * 0.22, PREFECTURE_MARKER_MIN_RADIUS, PREFECTURE_MARKER_MAX_RADIUS);
-  return isSelected ? Math.min(radius * PREFECTURE_MARKER_SELECTED_FACTOR, PREFECTURE_MARKER_MAX_RADIUS * PREFECTURE_MARKER_SELECTED_FACTOR) : radius;
+function prefectureMarkerRadius(mapHeight, isSelected) {
+  const radius = mapHeight * PREFECTURE_MARKER_RADIUS_RATIO;
+  return isSelected ? radius * PREFECTURE_MARKER_SELECTED_FACTOR : radius;
 }
 
 function clamp(value, min, max) {
@@ -388,11 +452,11 @@ export function cartePlacementDepartements({
   const region = geo.regions.find((r) => r.code === regionCode);
   const departements = geo.departements.filter((d) => d.regionCode === regionCode);
   const interactive = typeof onSelect === 'function';
+  const bbox = region ? padBbox(region.bbox, REGION_ZOOM_MARGIN) : [0, 0, geo.viewBox.width, geo.viewBox.height];
+  const mapHeight = bbox[3] - bbox[1];
 
   const root = svg('svg', {
-    viewBox: region
-      ? bboxToViewBox(padBbox(region.bbox, REGION_ZOOM_MARGIN))
-      : `0 0 ${geo.viewBox.width} ${geo.viewBox.height}`,
+    viewBox: bboxToViewBox(bbox),
     class: 'carte',
     role: interactive ? 'group' : 'img',
     'aria-label': region ? `Départements de ${region.nom}` : 'Départements',
@@ -412,7 +476,7 @@ export function cartePlacementDepartements({
         d: dep.path,
         fill: 'var(--surface)',
         stroke: 'var(--separator)',
-        'stroke-width': 1,
+        'stroke-width': mapHeight * BORDER_RATIO,
         'stroke-linejoin': 'round',
       }),
     );
@@ -441,14 +505,19 @@ export function cartePlacementDepartements({
         d: highlighted.path,
         fill: 'var(--highlight)',
         stroke: 'var(--highlight-strong)',
-        'stroke-width': 2,
+        'stroke-width': mapHeight * ACCENT_BORDER_RATIO,
         'stroke-linejoin': 'round',
         'pointer-events': 'none',
       }),
     );
   }
 
-  appendReveal(root, departements, { correctCode, pickedCode, fillOpacity: 0.35, strokeWidth: 2.5 });
+  appendReveal(root, departements, {
+    correctCode,
+    pickedCode,
+    fillOpacity: 0.35,
+    strokeWidth: mapHeight * ACCENT_BORDER_RATIO,
+  });
 
   return root;
 }
