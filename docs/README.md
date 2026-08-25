@@ -8,7 +8,7 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 105 vérifications dans un navigateur
+12 tests du moteur + 135 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
@@ -49,6 +49,29 @@ deux temps :
 Se tromper au temps 1 **n'interrompt pas la manche** : le bon nom s'affiche et
 sert de contexte aux deux questions suivantes, qu'on répond quand même. La
 carte ne compte comme réussie que si **les trois** réponses sont justes.
+
+### Répondre au clavier, et le barème
+
+Les trois questions textuelles (nom, numéro, chef-lieu) se répondent dans un
+**champ de saisie avec autocomplétion** — qui propose parmi les 96
+départements, pas parmi quatre. Un bouton « Voir les propositions » fait venir
+un QCM à quatre choix quand on sèche.
+
+| | Points |
+|---|---|
+| Réponse trouvée seul | **2** |
+| Réponse trouvée avec les propositions | **1** |
+| Réponse fausse | 0 |
+
+Retrouver une réponse et la reconnaître parmi quatre ne demandent pas le même
+effort : le barème le dit, 6 points au maximum par manche. **Ça ne change rien
+à la répétition espacée** — une carte répondue juste avec les propositions
+reste réussie et ressort dans trois jours. Les points mesurent l'aisance, le
+SRS mesure la mémoire.
+
+Une saisie qui ne correspond à aucune réponse connue (faute de frappe, réponse
+incomplète) n'est **pas** comptée comme une erreur : on le signale et on laisse
+corriger. Accents, tirets et majuscules sont ignorés dans la comparaison.
 
 Sur les questions de placement, le retour visuel montre **deux** formes : celle
 qu'on a touchée en **rouge**, et la bonne réponse en **vert**. Afficher la
@@ -266,6 +289,7 @@ docs/
       home.js            Accueil : carte de France, une région = un point d'entrée.
       lesson.js          Leçon : carte d'une région + fiche département.
       quiz.js             Quiz : le nom d'abord, puis les 2 infos restantes.
+      champ-reponse.js    Saisie libre + autocomplétion + QCM de secours.
       progress.js         Statistiques de progression (consultation seule).
       settings.js         Réglages : version installée, mise à jour, remise à zéro.
       dom.js              Micro-outils de construction d'éléments HTML/SVG.

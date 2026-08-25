@@ -18,7 +18,9 @@
  *
  *      Temps 1 — retrouver le NOM du département, à partir d'un énoncé tiré
  *        au sort : son numéro, son emplacement (carte de sa région, le
- *        département en jaune) ou sa préfecture.
+ *        département en jaune) ou sa préfecture. La réponse se tape au
+ *        clavier (ui/champ-reponse.js) ; les quatre propositions restent
+ *        accessibles d'un bouton, mais coûtent un point.
  *      Temps 2 — les deux informations restantes, posées ensemble sur la
  *        même page. Ex. : énoncé "33" → temps 1 "Gironde" → temps 2
  *        emplacement + préfecture.
@@ -43,7 +45,36 @@ import { today } from '../engine/date.js';
 import { loadFranceGeo } from '../data/geo.js';
 import { getDailyCardIds, getReviewedTodayCardIds, recordDailyReview } from '../storage/store.js';
 import { carteRegions, cartePlacementDepartements } from './carte.js';
+import { champReponse } from './champ-reponse.js';
 import { clear, el } from './dom.js';
+
+/**
+ * Barème. Une manche pose trois questions, donc 6 points au maximum.
+ *
+ * Retrouver une réponse de tête et la reconnaître parmi quatre ne demandent
+ * pas le même effort : le barème le dit. Ça ne change rien à la répétition
+ * espacée — une carte répondue juste avec les propositions reste réussie et
+ * ressort dans trois jours (voir .claude/skills/moteur-srs/). Les points
+ * mesurent l'aisance, le SRS mesure la mémoire ; ce sont deux choses.
+ */
+const POINTS = { seul: 2, aide: 1, rate: 0 };
+/** Questions par manche : le nom, puis les deux informations restantes. */
+const QUESTIONS_PAR_MANCHE = 3;
+
+/** @param {{correct: boolean, helped: boolean}} state @returns {number} */
+function pointsFor(state) {
+  if (!state || !state.correct) return POINTS.rate;
+  return state.helped ? POINTS.aide : POINTS.seul;
+}
+
+/**
+ * État d'une question, avant réponse. `helped` retient si les propositions
+ * ont été demandées : c'est ce qui décide des points, et il doit survivre aux
+ * redessins (répondre à une question du temps 2 redessine l'autre).
+ */
+function nouvelEtat() {
+  return { answered: false, correct: false, helped: false, given: null, step: 'region', reveal: null };
+}
 
 /**
  * Temps d'affichage du retour vert/rouge avant de passer à la suite.
@@ -85,11 +116,16 @@ export function quizScreen() {
   let rounds = null;
   let index = 0;
   let correctRounds = 0;
+  let earnedPoints = 0;
+  let maxPoints = 0;
+
+  /** Toutes les réponses possibles, par facette — sert à l'autocomplétion. */
+  let candidates = { nom: [], numero: [], chefLieu: [] };
 
   /** 'nom' = temps 1, 'paire' = temps 2. */
   let phase = 'nom';
-  /** Le nom a-t-il été trouvé ? (sert de contexte au temps 2) */
-  let nomWasCorrect = true;
+  /** Réponse au temps 1 : sert de contexte au temps 2 et compte dans le score. */
+  let nomState = nouvelEtat();
   /** Verrouille l'interface pendant l'affichage du retour visuel. */
   let answering = false;
   /** Mise en évidence temporaire sur la carte du temps 1. */
@@ -100,7 +136,7 @@ export function quizScreen() {
 
   function resetRoundState() {
     phase = 'nom';
-    nomWasCorrect = true;
+    nomState = nouvelEtat();
     answering = false;
     promptReveal = null;
     pairState = {};
@@ -138,6 +174,14 @@ export function quizScreen() {
               ? 'Tout juste. À demain pour de nouvelles cartes.'
               : 'Les cartes ratées reviendront dès demain.',
         }),
+        el('p', { class: 'quiz-points-total', text: `${earnedPoints} / ${maxPoints} points` }),
+        el('p', {
+          class: 'muted quiz-practice-note',
+          text:
+            earnedPoints === maxPoints
+              ? 'Le maximum : tout trouvé sans regarder les propositions.'
+              : '2 points par réponse trouvée seul, 1 avec les propositions.',
+        }),
         el('button', {
           class: 'replay-button',
           type: 'button',
@@ -149,6 +193,8 @@ export function quizScreen() {
             rounds = shuffled(rounds.map((round) => buildRound(round.card, geo, counted.has(round.card.id))));
             index = 0;
             correctRounds = 0;
+            earnedPoints = 0;
+            maxPoints = 0;
             resetRoundState();
             render();
           },
@@ -177,13 +223,20 @@ export function quizScreen() {
     slot.appendChild(promptBlock(round, round.prompt === 'emplacement'));
     slot.appendChild(el('p', { class: 'quiz-question', text: 'Quel est ce département ?' }));
     slot.appendChild(
-      choiceGrid(round.choices.nom, (success) => {
-        nomWasCorrect = success;
-        window.setTimeout(() => {
-          answering = false;
-          phase = 'paire';
-          render();
-        }, feedbackDelay(success, FEEDBACK_DELAY_MS));
+      champReponse({
+        choice: round.choices.nom,
+        candidates: candidates.nom,
+        placeholder: 'Nom du département',
+        state: nomState,
+        isBusy: () => answering,
+        onAnswer: (success) => {
+          answering = true;
+          window.setTimeout(() => {
+            answering = false;
+            phase = 'paire';
+            render();
+          }, feedbackDelay(success, FEEDBACK_DELAY_MS));
+        },
       }),
     );
   }
@@ -217,7 +270,7 @@ export function quizScreen() {
     // Le nom sert de contexte aux deux questions : elles parlent de "lui".
     // Affiché même quand il a été raté — c'est justement là qu'il faut le voir.
     slot.appendChild(el('p', { class: 'quiz-context', text: round.dep.nom }));
-    if (!nomWasCorrect) {
+    if (!nomState.correct) {
       slot.appendChild(el('p', { class: 'quiz-context-wrong', text: 'Ce n’était pas la bonne réponse.' }));
     }
 
@@ -229,7 +282,7 @@ export function quizScreen() {
   }
 
   function pairItem(round, facet) {
-    const state = pairState[facet] ?? { answered: false, correct: false, step: 'region', reveal: null };
+    const state = pairState[facet] ?? nouvelEtat();
     pairState[facet] = state;
 
     // La classe "répondu" verrouille visuellement le bloc : les deux
@@ -242,18 +295,20 @@ export function quizScreen() {
       item.appendChild(placementBlock(round, state));
     } else {
       item.appendChild(
-        choiceGrid(
-          round.choices[facet],
-          (success) => {
-            state.answered = true;
-            state.correct = success;
+        champReponse({
+          choice: round.choices[facet],
+          candidates: candidates[facet],
+          placeholder: facet === 'numero' ? 'Numéro' : 'Chef-lieu',
+          state,
+          isBusy: () => answering,
+          onAnswer: (success) => {
+            answering = true;
             window.setTimeout(() => {
               answering = false;
               afterPairAnswer();
             }, feedbackDelay(success, FEEDBACK_DELAY_MS));
           },
-          state,
-        ),
+        }),
       );
     }
 
@@ -363,55 +418,18 @@ export function quizScreen() {
     return wrap;
   }
 
-  // ---- Grille de propositions ----
-
-  /**
-   * Verrouille au premier tap, montre la bonne réponse, puis prévient
-   * l'appelant. `lockedState` permet de réafficher une question déjà répondue
-   * dans son état final (temps 2 : l'autre question peut provoquer un redessin).
-   */
-  function choiceGrid(choice, onDone, lockedState = null) {
-    const grid = el('div', { class: 'quiz-choices' });
-    const buttons = choice.options.map((option) =>
-      el('button', { class: 'choice-button', type: 'button', text: option }),
-    );
-
-    if (lockedState && lockedState.answered) {
-      buttons.forEach((button, i) => {
-        if (choice.options[i] === choice.correct) button.classList.add('choice-correct');
-        else if (choice.options[i] === lockedState.picked) button.classList.add('choice-wrong');
-        grid.appendChild(button);
-      });
-      return grid;
-    }
-
-    buttons.forEach((button, i) => {
-      button.addEventListener('click', () => {
-        if (answering) return;
-        answering = true;
-
-        const success = choice.options[i] === choice.correct;
-        if (lockedState) lockedState.picked = choice.options[i];
-
-        buttons.forEach((other, j) => {
-          if (choice.options[j] === choice.correct) other.classList.add('choice-correct');
-          else if (j === i) other.classList.add('choice-wrong');
-        });
-
-        onDone(success);
-      });
-      grid.appendChild(button);
-    });
-
-    return grid;
-  }
-
   /** Fin de manche : c'est ici, et seulement ici, que le SRS est mis à jour. */
   function finishRound() {
     const round = rounds[index];
     const allPairCorrect = round.remaining.every((facet) => pairState[facet]?.correct);
-    const roundSucceeded = nomWasCorrect && allPairCorrect;
+    const roundSucceeded = nomState.correct && allPairCorrect;
     if (roundSucceeded) correctRounds += 1;
+
+    // Les points sont indépendants du SRS : une carte trouvée avec les
+    // propositions rapporte moins, mais reste réussie et ressort dans 3 jours.
+    earnedPoints += pointsFor(nomState);
+    for (const facet of round.remaining) earnedPoints += pointsFor(pairState[facet]);
+    maxPoints += QUESTIONS_PAR_MANCHE * POINTS.seul;
 
     recordDailyReview(round.card.id, roundSucceeded, today());
 
@@ -437,6 +455,18 @@ export function quizScreen() {
   loadFranceGeo()
     .then((loadedGeo) => {
       geo = loadedGeo;
+
+      // L'autocomplétion propose parmi les 96 départements, pas parmi les
+      // quatre du QCM de secours : sinon taper reviendrait à choisir, et la
+      // distinction entre « je sais » et « je reconnais » n'existerait plus.
+      candidates = {
+        nom: geo.departements.map((d) => d.nom).sort((a, b) => a.localeCompare(b, 'fr')),
+        numero: geo.departements.map((d) => d.code).sort((a, b) => a.localeCompare(b, 'fr')),
+        chefLieu: geo.departements
+          .filter((d) => d.prefecture)
+          .map((d) => d.prefecture.nom)
+          .sort((a, b) => a.localeCompare(b, 'fr')),
+      };
 
       const day = today();
       const alreadyCounted = new Set(getReviewedTodayCardIds(day));
