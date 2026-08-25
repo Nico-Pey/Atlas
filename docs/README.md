@@ -8,7 +8,7 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 135 vérifications dans un navigateur
+12 tests du moteur + 176 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
@@ -82,6 +82,17 @@ d'autant que le tap est rattrapé vers le département le plus proche (§ 4).
 > d'un département suffit à le replacer sur la carte sans rien savoir de lui,
 > ce qui rendait la question de placement gratuite. L'énoncé « emplacement »
 > la remplace — il montre où il est, et demande son nom.
+
+**L'onglet Défi** est un jeu libre, à côté de la révision : on donne un nom de
+département, il faut le placer sur la carte — sa région d'abord, puis le
+département à l'intérieur. Bien placé, on passe au suivant ; mal placé, on perd
+une vie et on recommence le même. Deux réglages avant de lancer : **3, 2 ou une
+infinité de vies**, et **10, 20 ou les 96 départements**.
+
+Le Défi pioche dans les 96 départements, pas seulement ceux vus en leçon — et
+il **n'écrit rien dans la progression** : c'est le Quiz, et lui seul, qui fait
+avancer la répétition espacée. La bonne réponse n'est montrée qu'à la fin de la
+partie : la révéler après une erreur offrirait le deuxième essai.
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.
@@ -290,7 +301,7 @@ docs/
       lesson.js          Leçon : carte d'une région + fiche département.
       quiz.js             Quiz : le nom d'abord, puis les 2 infos restantes.
       champ-reponse.js    Saisie libre + autocomplétion + QCM de secours.
-      progress.js         Statistiques de progression (consultation seule).
+      defi.js             Défi : placer des départements contre ses vies.
       settings.js         Réglages : version installée, mise à jour, remise à zéro.
       dom.js              Micro-outils de construction d'éléments HTML/SVG.
     app.js             Routage par ancre + barre d'onglets.
