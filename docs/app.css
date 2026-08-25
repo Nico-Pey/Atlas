@@ -505,6 +505,141 @@ button {
   font-size: 13px;
 }
 
+/* ---------- Champ de réponse libre (quiz) ---------- */
+
+.quiz-champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.quiz-champ-form {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* 17px minimum : en dessous, Safari sur iPhone zoome tout seul sur le champ
+   quand on le touche, et la page reste zoomée après. */
+.quiz-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-md);
+  background: var(--background);
+  border: 1.5px solid var(--separator);
+  border-radius: var(--radius-button);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+}
+
+.quiz-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.quiz-valider-button {
+  flex: none;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-md);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-button);
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.quiz-suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.quiz-suggestion {
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-md);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-button);
+  font-size: 17px;
+  text-align: left;
+}
+
+.quiz-champ-message:empty {
+  display: none;
+}
+
+.quiz-champ-message {
+  font-size: 15px;
+  color: var(--danger);
+  margin: 0;
+}
+
+/* Volontairement discret : c'est une porte de sortie, pas le chemin normal. */
+.quiz-reveal-button {
+  align-self: flex-start;
+  min-height: var(--touch-target);
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  text-decoration: underline;
+}
+
+.quiz-champ-aide {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-sm);
+}
+
+/* Une fois répondu : ce qu'on a donné, et ce que ça rapporte. */
+.quiz-reponse {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-md);
+  border: 1.5px solid;
+  border-radius: var(--radius-button);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.quiz-reponse-juste {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.quiz-reponse-fausse {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.quiz-points {
+  font-variant-numeric: tabular-nums;
+}
+
+.quiz-bonne-reponse {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: var(--space-xs) 0 0;
+}
+
+.quiz-points-total {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: var(--space-sm) 0 0;
+}
+
 .quiz-choices {
   display: grid;
   grid-template-columns: 1fr 1fr;

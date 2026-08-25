@@ -102,6 +102,16 @@ Le SRS n'est mis à jour **qu'à la fin de la manche**, jamais question par
 question : une carte = une réponse SRS par jour, quel que soit le nombre de
 questions posées dessus.
 
+### Les points ne sont pas le SRS
+
+Les questions textuelles se répondent au clavier ; un bouton fait venir un QCM
+à quatre choix quand on sèche. Trouver seul vaut 2 points, trouver avec les
+propositions 1 point. **Ce barème n'a aucun effet sur la répétition espacée** :
+une carte répondue juste avec les propositions est une réussite comme une
+autre, elle sort du pool 3 jours. Les points mesurent l'aisance sur une
+session, le SRS mesure la mémoire dans le temps — ne pas mélanger les deux
+dans `engine/srs.js`, qui ne connaît que juste/faux.
+
 ## Ce que ce module ne fait PAS
 
 - Il ne lit jamais l'heure ou la date lui-même (`new Date()` interdit dans
