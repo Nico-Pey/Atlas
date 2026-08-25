@@ -20,7 +20,7 @@
  * continueront de servir l'ancienne version depuis leur cache.
  */
 
-const CACHE_NAME = 'atlas-v11';
+const CACHE_NAME = 'atlas-v12';
 
 /** Chemins relatifs : fonctionne aussi bien à la racine que dans /Atlas/. */
 const ASSETS = [
@@ -32,6 +32,7 @@ const ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './js/app.js',
+  './js/data/anecdotes.js',
   './js/data/themes.js',
   './js/data/geo.js',
   './js/data/geo/france.json',

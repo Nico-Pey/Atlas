@@ -47,6 +47,20 @@
   display: none !important;
 }
 
+/* Lisible par un lecteur d'écran, invisible à l'œil : sert à donner un
+   contexte que la mise en page rend évident visuellement mais qui manquerait
+   à l'oral (« 40 » seul ne dit pas que c'est un numéro de département). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 html,
 body {
   margin: 0;
@@ -268,15 +282,27 @@ button {
 
 .detail-slot {
   min-height: 96px;
+  /* La barre d'onglets est fixe : elle recouvre le bas du viewport, dont
+     scrollIntoView() ne sait rien. Sans cette marge, le défilement déclenché
+     en touchant un département laisse la fin de l'anecdote cachée derrière
+     les onglets. */
+  scroll-margin-bottom: calc(var(--tabs-height) + var(--space-md));
 }
 
 .departement-detail {
   display: flex;
+  flex-direction: column;
   gap: var(--space-md);
-  align-items: flex-start;
   padding: var(--space-lg);
   background: var(--surface);
   border-radius: var(--radius-card);
+}
+
+/* Le numéro (ou le blason) et les noms, côte à côte. */
+.departement-detail-head {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
 }
 
 .departement-blason {
@@ -287,15 +313,26 @@ button {
   object-fit: contain;
 }
 
-.departement-blason-placeholder {
+/* Le numéro du département : une des trois informations que le quiz demande,
+   donc affiché en grand. La pastille est juste assez large pour deux
+   caractères — un cadre à la taille d'un blason laissait « 40 » flotter dans
+   le vide. `ch` plutôt que `px` : la largeur suit la taille du texte. */
+.departement-numero {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px dashed var(--separator);
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--background);
+  min-width: 2.6ch;
+  padding: 2px var(--space-sm);
+  border-radius: 10px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  /* Chiffres à chasse fixe : « 11 » et « 40 » font la même largeur, la
+     pastille ne change pas de taille d'un département à l'autre. */
+  font-variant-numeric: tabular-nums;
 }
 
 .departement-detail-texts {
@@ -325,6 +362,29 @@ button {
 .departement-detail-prefecture-name {
   color: var(--accent);
   font-weight: 600;
+}
+
+/* L'anecdote : en pleine largeur sous l'en-tête, séparée par un filet. Une
+   phrase a besoin de place — la colonne de droite est trop étroite sur un
+   téléphone, le texte y tomberait en escalier. */
+.departement-anecdote {
+  border-top: 1px solid var(--separator);
+  padding-top: var(--space-md);
+}
+
+.departement-anecdote-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-xs);
+}
+
+.departement-anecdote-text {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* ---------- Quiz (énoncé + facettes à choix multiples) ---------- */

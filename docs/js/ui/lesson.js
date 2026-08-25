@@ -11,6 +11,7 @@
  * multiples reste dans js/ui/quiz.js, avec le même contenu (question/réponse).
  */
 
+import { findAnecdote } from '../data/anecdotes.js';
 import { findLesson } from '../data/themes.js';
 import { today } from '../engine/date.js';
 import { loadFranceGeo } from '../data/geo.js';
@@ -18,8 +19,6 @@ import { getPool } from '../engine/srs.js';
 import { getAllProgress, markCardSeen } from '../storage/store.js';
 import { carteDepartements, OPACITY_BY_STATUS } from './carte.js';
 import { clear, el } from './dom.js';
-
-const POPULATION_FORMAT = new Intl.NumberFormat('fr-FR');
 
 /**
  * @param {string} lessonId
@@ -88,26 +87,43 @@ export function lessonScreen(lessonId, navigate) {
     const card = lesson.cards.find((c) => c.mapId === selectedMapId);
     if (!depGeo || !card || !depGeo.prefecture) return;
 
+    const anecdote = findAnecdote(depGeo.code);
+
     detailSlot.appendChild(
       el('div', { class: 'departement-detail' }, [
-        blasonSlot(depGeo),
-        el('div', { class: 'departement-detail-texts' }, [
-          el('p', { class: 'departement-detail-label', text: lesson.title }),
-          el('h2', { class: 'departement-detail-title', text: depGeo.nom }),
-          el('p', { class: 'departement-detail-prefecture' }, [
-            el('span', { class: 'departement-detail-prefecture-name', text: depGeo.prefecture.nom }),
-            el('span', { text: ' — préfecture' }),
+        el('div', { class: 'departement-detail-head' }, [
+          blasonSlot(depGeo),
+          el('div', { class: 'departement-detail-texts' }, [
+            el('p', { class: 'departement-detail-label', text: lesson.title }),
+            el('h2', { class: 'departement-detail-title', text: depGeo.nom }),
+            el('p', { class: 'departement-detail-prefecture' }, [
+              el('span', { class: 'departement-detail-prefecture-name', text: depGeo.prefecture.nom }),
+              el('span', { text: ' — préfecture' }),
+            ]),
           ]),
-          el('p', {
-            class: 'muted',
-            text: `${POPULATION_FORMAT.format(depGeo.prefecture.population)} habitants`,
-          }),
         ]),
+
+        // Une phrase pour accrocher la mémoire (voir data/anecdotes.js). En
+        // pleine largeur sous l'en-tête plutôt qu'à côté du numéro : une
+        // phrase a besoin de place, la colonne de droite est trop étroite
+        // sur un téléphone.
+        anecdote &&
+          el('div', { class: 'departement-anecdote' }, [
+            el('p', { class: 'departement-anecdote-label', text: 'À retenir' }),
+            el('p', { class: 'departement-anecdote-text', text: anecdote }),
+          ]),
       ]),
     );
   }
 
-  /** Espace réservé tant qu'aucun blason n'a été fourni (voir docs/README.md). */
+  /**
+   * Le blason du département quand on en a un, sinon son NUMÉRO.
+   *
+   * Le numéro n'est pas un pis-aller en attendant les blasons : c'est l'une
+   * des trois informations que le quiz demande. Il est donc affiché en grand,
+   * dans une pastille juste assez large pour lui — un cadre de la taille d'un
+   * blason laissait « 40 » flotter au milieu du vide.
+   */
   function blasonSlot(depGeo) {
     if (depGeo.prefecture.blason) {
       return el('img', {
@@ -116,7 +132,8 @@ export function lessonScreen(lessonId, navigate) {
         alt: `Blason de ${depGeo.nom}`,
       });
     }
-    return el('div', { class: 'departement-blason departement-blason-placeholder', 'aria-hidden': 'true' }, [
+    return el('div', { class: 'departement-numero' }, [
+      el('span', { class: 'sr-only', text: 'Département numéro ' }),
       el('span', { text: depGeo.code }),
     ]);
   }
@@ -129,6 +146,12 @@ export function lessonScreen(lessonId, navigate) {
 
     renderMap();
     renderDetail();
+
+    // La fiche est sous la carte et la légende : sur un téléphone, elle
+    // tombe en partie hors écran, et l'anecdote encore plus bas. `nearest`
+    // fait défiler le strict minimum, pour que la carte reste visible et
+    // qu'on puisse enchaîner sur un autre département.
+    detailSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     // La fiche est sous la carte, donc souvent hors écran sur un iPhone. On
     // l'amène dans le champ de vision : sinon il faudrait scroller à chaque

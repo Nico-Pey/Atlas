@@ -8,13 +8,16 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 89 vérifications dans un navigateur
+12 tests du moteur + 105 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
 
 L'accueil affiche la carte de France (13 régions, toutes cliquables) ; toucher
-une région zoome sur ses départements. C'est aussi une **carte
+une région zoome sur ses départements, et toucher un département ouvre sa
+fiche : son numéro, sa préfecture, et une **anecdote pour la retenir**
+(`docs/js/data/anecdotes.js`, écrit à la main — c'est le fichier à ouvrir pour
+en corriger une). C'est aussi une **carte
 d'avancement** : une région jamais visitée est grise, et verdit à mesure que
 ses départements sont appris — exactement comme les départements à l'intérieur
 d'une leçon. **Les 96 départements métropolitains
@@ -253,6 +256,7 @@ docs/
     data/themes.js     Contenu figé : thèmes, leçons, cartes. GÉNÉRÉ pour le
                        thème "departements" (voir § 6) — ne pas éditer ces
                        leçons à la main.
+    data/anecdotes.js   Une anecdote par département, ÉCRITE À LA MAIN.
     data/geo.js         Chargement paresseux de la géométrie de France.
     data/geo/france.json  Régions + départements, un seul repère (voir § 6).
     engine/            Moteur SRS PUR : ni DOM, ni stockage, ni horloge.
