@@ -9,7 +9,7 @@
 import { clear, el, svg } from './ui/dom.js';
 import { homeScreen } from './ui/home.js';
 import { lessonScreen } from './ui/lesson.js';
-import { progressScreen } from './ui/progress.js';
+import { defiScreen } from './ui/defi.js';
 import { quizScreen } from './ui/quiz.js';
 import { settingsScreen } from './ui/settings.js';
 
@@ -19,7 +19,7 @@ const tabsRoot = document.getElementById('tabs');
 const TABS = [
   { route: '#/', label: 'Apprendre', icon: 'globe' },
   { route: '#/quiz', label: 'Quiz', icon: 'cards' },
-  { route: '#/progression', label: 'Progression', icon: 'bars' },
+  { route: '#/defi', label: 'Défi', icon: 'cible' },
   { route: '#/reglages', label: 'Réglages', icon: 'sliders' },
 ];
 
@@ -28,7 +28,7 @@ const TABS = [
  * texte (donc le vert d'Atlas quand l'onglet est actif) et gardent le même
  * rendu sur tous les appareils.
  *
- * @param {'globe' | 'cards' | 'bars' | 'sliders'} name
+ * @param {'globe' | 'cards' | 'cible' | 'sliders'} name
  * @returns {SVGElement}
  */
 function icon(name) {
@@ -58,24 +58,26 @@ function icon(name) {
     ]);
   }
 
-  if (name === 'sliders') {
-    // Des curseurs plutôt qu'une roue crantée : la roue demande une dizaine de
-    // dents, donc un tracé long et illisible dans le code, pour un dessin qui
-    // se brouille à 24 px. Deux curseurs disent la même chose en quatre traits.
+  if (name === 'cible') {
+    // Une cible : trois cercles concentriques, lisibles à 24 px.
     return svg('svg', common, [
-      svg('path', { d: 'M4 8.5h9' }),
-      svg('circle', { cx: 16, cy: 8.5, r: 2.2 }),
-      svg('path', { d: 'M19 8.5h1' }),
-      svg('path', { d: 'M4 15.5h1' }),
-      svg('circle', { cx: 8, cy: 15.5, r: 2.2 }),
-      svg('path', { d: 'M11 15.5h9' }),
+      svg('circle', { cx: 12, cy: 12, r: 8.5 }),
+      svg('circle', { cx: 12, cy: 12, r: 4.5 }),
+      svg('circle', { cx: 12, cy: 12, r: 1.2, fill: 'currentColor' }),
     ]);
   }
 
-  return svg('svg', { ...common, fill: 'currentColor', stroke: 'none' }, [
-    svg('rect', { x: 4, y: 13, width: 3.5, height: 7, rx: 1 }),
-    svg('rect', { x: 10.25, y: 9, width: 3.5, height: 11, rx: 1 }),
-    svg('rect', { x: 16.5, y: 4, width: 3.5, height: 16, rx: 1 }),
+  // Des curseurs plutôt qu'une roue crantée pour les Réglages : la roue
+  // demande une dizaine de dents, donc un tracé long et illisible dans le
+  // code, pour un dessin qui se brouille à 24 px.
+  // Dernier cas : les curseurs des Réglages.
+  return svg('svg', common, [
+    svg('path', { d: 'M4 8.5h9' }),
+    svg('circle', { cx: 16, cy: 8.5, r: 2.2 }),
+    svg('path', { d: 'M19 8.5h1' }),
+    svg('path', { d: 'M4 15.5h1' }),
+    svg('circle', { cx: 8, cy: 15.5, r: 2.2 }),
+    svg('path', { d: 'M11 15.5h9' }),
   ]);
 }
 
@@ -83,7 +85,7 @@ function icon(name) {
 function navigate(route) {
   if (window.location.hash === route) {
     // Même route qu'actuellement : `hashchange` ne se déclenchera pas, on
-    // redessine donc à la main (cas de la réinitialisation de progression).
+    // redessine donc à la main (cas de la remise à zéro dans Réglages).
     render();
   } else {
     window.location.hash = route;
@@ -93,7 +95,7 @@ function navigate(route) {
 /** Onglet à surligner : une leçon reste dans l'onglet "Apprendre". */
 function activeTabRoute(hash) {
   if (hash.startsWith('#/quiz')) return '#/quiz';
-  if (hash.startsWith('#/progression')) return '#/progression';
+  if (hash.startsWith('#/defi')) return '#/defi';
   if (hash.startsWith('#/reglages')) return '#/reglages';
   return '#/';
 }
@@ -127,8 +129,8 @@ function render() {
     screenRoot.appendChild(lessonScreen(lessonId, navigate));
   } else if (hash.startsWith('#/quiz')) {
     screenRoot.appendChild(quizScreen());
-  } else if (hash.startsWith('#/progression')) {
-    screenRoot.appendChild(progressScreen());
+  } else if (hash.startsWith('#/defi')) {
+    screenRoot.appendChild(defiScreen());
   } else if (hash.startsWith('#/reglages')) {
     screenRoot.appendChild(settingsScreen(navigate));
   } else {

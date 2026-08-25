@@ -570,7 +570,10 @@ button {
   text-align: left;
 }
 
-.quiz-champ-message:empty {
+/* Conteneurs vides tant qu'ils n'ont rien à montrer : sans ça, ils comptent
+   dans le `gap` du conteneur flex et creusent un trou. */
+.quiz-champ-message:empty,
+.quiz-champ-propositions:empty {
   display: none;
 }
 
@@ -738,38 +741,6 @@ button {
   margin: 0;
 }
 
-/* ---------- Progression ---------- */
-
-.stats-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  padding: var(--space-md);
-  background: var(--surface);
-  border-radius: var(--radius-card);
-}
-
-.stats-title {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.stats-total {
-  font-size: 15px;
-  color: var(--text-muted);
-  margin: 0 0 var(--space-sm);
-}
-
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-}
-
-.stats-value {
-  font-weight: 600;
-}
-
 /* Action destructrice : volontairement discrète (pas de fond plein, pas de
    rouge criard) pour ne pas attirer le doigt, mais bien assez grande pour être
    touchée quand on la cherche. */
@@ -780,5 +751,119 @@ button {
   border: 1px solid var(--separator);
   border-radius: var(--radius-button);
   color: var(--danger);
+  font-size: 15px;
+}
+
+/* ---------- Défi ---------- */
+
+.defi-reglage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.defi-reglage-titre {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.defi-options {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.defi-option {
+  flex: 1;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-sm);
+  background: var(--surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-button);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.defi-option-active {
+  background: var(--background);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.defi-start-button {
+  min-height: var(--touch-target);
+  margin-top: var(--space-md);
+  padding: 0 var(--space-lg);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-button);
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.defi-retour-button {
+  min-height: var(--touch-target);
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.defi-fin-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.defi-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.defi-progres {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.defi-vies {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--danger);
+}
+
+.defi-coeur {
+  width: 20px;
+  height: 20px;
+}
+
+.defi-infini {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.defi-consigne {
+  font-size: 15px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: var(--space-md) 0 0;
+}
+
+/* Le nom cherché : c'est la seule consigne, elle doit se lire d'un coup. */
+.defi-cible {
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 var(--space-sm);
+}
+
+.defi-etape {
   font-size: 15px;
 }

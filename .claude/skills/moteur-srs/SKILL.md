@@ -22,7 +22,8 @@ Une carte passe par trois étapes indépendantes :
 
 ## Les trois pools
 
-Le pool est un statut **d'affichage** (utilisé sur l'écran Progression), pas
+Le pool est un statut **d'affichage** — il colore les départements sur la
+carte d'une leçon, et les régions sur la carte de France de l'accueil — pas
 une mécanique séparée : il se recalcule à tout moment à partir de
 `attempts` (nombre de passages au quiz) et `streak` (réussites d'affilée
 les plus récentes, remise à 0 au premier échec).
@@ -101,6 +102,14 @@ correctes ; une seule erreur suffit à compter la manche comme un échec
 Le SRS n'est mis à jour **qu'à la fin de la manche**, jamais question par
 question : une carte = une réponse SRS par jour, quel que soit le nombre de
 questions posées dessus.
+
+### Le Défi n'est pas le SRS non plus
+
+L'onglet Défi (`ui/defi.js`) est un jeu libre : il pioche dans les 96
+départements, y compris ceux jamais vus en leçon, et **n'écrit rien** dans
+`/storage`. Le Quiz reste le seul écran qui fait avancer la répétition
+espacée — sinon une partie de Défi ferait croire au moteur qu'on a révisé
+trente cartes.
 
 ### Les points ne sont pas le SRS
 
