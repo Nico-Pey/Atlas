@@ -8,7 +8,7 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 198 vérifications dans un navigateur
+12 tests du moteur + 216 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
@@ -98,6 +98,16 @@ il **n'écrit rien dans la progression** : c'est le Quiz, et lui seul, qui fait
 avancer la répétition espacée. La forme touchée passe au **vert** si elle est juste, au **rouge** sinon ; dans
 ce dernier cas la bonne réponse n'est pas révélée — on ne la voit qu'à la fin
 de la partie, sans quoi le deuxième essai serait offert.
+
+Un département trouvé **reste en vert clair** jusqu'à la fin de la partie,
+avec son nom écrit dedans. Quand le nom ne tient pas dans la forme, ou qu'il
+empiéterait sur l'étiquette d'un voisin, c'est le **numéro** qui s'affiche à la
+place — c'est ce qui se passe pour Paris et la petite couronne, où
+« Seine-Saint-Denis » déborderait sur trois départements.
+
+Enfin, un bouton **Passer** permet de sauter un département qu'on ne connaît
+pas : il ne coûte pas de vie, montre la réponse au passage, mais ne compte pas
+comme trouvé — le score final le dit.
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.

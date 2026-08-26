@@ -27,6 +27,8 @@ import { clear, el } from './dom.js';
 
 /** Le temps de voir le retour vert/rouge avant d'enchaîner. */
 const FEEDBACK_MS = { correct: 650, wrong: 1200 };
+/** Plus long après un « Passer » : on découvre la réponse, il faut le temps de la lire. */
+const SKIP_REVEAL_MS = 1800;
 
 /** Vies au choix. `Infinity` = on joue sans pression. */
 const VIES = [
@@ -65,7 +67,10 @@ export function defiScreen() {
 
   /** @type {import('../data/geo.js').DepartementGeo[]} */
   let cibles = [];
+  /** Position dans la liste : avance sur une réussite ET sur un « Passer ». */
   let index = 0;
+  /** Départements réellement trouvés — c'est le score, et ce qui reste en vert. */
+  let trouvees = new Set();
   let viesRestantes = 0;
   /** Étape en cours : choisir la région, puis le département. */
   let etape = 'region';
@@ -89,6 +94,7 @@ export function defiScreen() {
     const total = longueur === Infinity ? disponibles.length : Math.min(longueur, disponibles.length);
     cibles = melange(disponibles).slice(0, total);
     index = 0;
+    trouvees = new Set();
     viesRestantes = vies;
     etape = 'region';
     reveal = null;
@@ -236,6 +242,51 @@ export function defiScreen() {
         text: etape === 'region' ? 'Touchez sa région.' : 'Touchez le département.',
       }),
     );
+
+    slot.appendChild(
+      el('div', { class: 'defi-passer' }, [
+        el('button', {
+          class: 'defi-passer-button',
+          type: 'button',
+          text: 'Passer ce département',
+          disabled: busy ? 'disabled' : null,
+          onClick: passer,
+        }),
+        el('p', {
+          class: 'muted center defi-passer-note',
+          text: 'Sans perdre de vie — mais il ne comptera pas comme trouvé.',
+        }),
+      ]),
+    );
+  }
+
+  /**
+   * Passer le département en cours.
+   *
+   * Ne coûte pas de vie : la sanction est ailleurs, le département ne sera
+   * pas compté comme trouvé et le score final le dira. Punir deux fois
+   * découragerait d'utiliser le bouton, or il est là pour éviter de perdre
+   * bêtement sur un département qu'on ne connaît pas encore.
+   *
+   * On montre où il était avant d'enchaîner : c'est précisément ce qu'on ne
+   * savait pas, autant l'apprendre.
+   */
+  function passer() {
+    if (busy) return;
+    busy = true;
+
+    etape = 'departement';
+    reveal = { picked: null, correct: cibles[index].code };
+    render();
+
+    window.setTimeout(() => {
+      busy = false;
+      reveal = null;
+      index += 1;
+      etape = 'region';
+      if (index >= cibles.length) phase = 'fin';
+      render();
+    }, SKIP_REVEAL_MS);
   }
 
   function carteDesRegions(cible) {
@@ -254,6 +305,9 @@ export function defiScreen() {
       regionCode: cible.regionCode,
       correctCode: reveal ? reveal.correct : null,
       pickedCode: reveal ? reveal.picked : null,
+      // Les départements déjà trouvés restent en vert clair : en revenant
+      // dans une région, on voit ce qu'on y a déjà placé.
+      solvedCodes: trouvees,
       onSelect: busy ? null : (code) => repondre(code === cible.code, code),
     });
   }
@@ -283,6 +337,7 @@ export function defiScreen() {
         if (etape === 'region') {
           etape = 'departement';
         } else {
+          trouvees.add(cibles[index].code);
           index += 1;
           etape = 'region';
         }
@@ -300,29 +355,44 @@ export function defiScreen() {
   // ---- Fin de partie ----
 
   function renderFin() {
-    const gagne = index >= cibles.length;
-    const cible = gagne ? null : cibles[index];
+    // Deux fins distinctes : être allé au bout de la liste, ou avoir épuisé
+    // ses vies en route. Le score, lui, est toujours le nombre de trouvés —
+    // les départements passés n'en font pas partie.
+    const termine = index >= cibles.length;
+    const trouves = trouvees.size;
+    const passes = index - trouves;
+    const cible = termine ? null : cibles[index];
     clear(slot);
 
     slot.appendChild(
       el('div', { class: 'empty-state center' }, [
-        el('h2', { class: 'empty-title', text: gagne ? 'Défi réussi.' : 'Plus de vies.' }),
-        el('p', { class: 'quiz-score', text: `${index} / ${cibles.length}` }),
+        el('h2', {
+          class: 'empty-title',
+          text: !termine ? 'Plus de vies.' : trouves === cibles.length ? 'Défi réussi.' : 'Défi terminé.',
+        }),
+        el('p', { class: 'quiz-score', text: `${trouves} / ${cibles.length}` }),
         el('p', {
           class: 'muted',
-          text: gagne
-            ? 'Tous les départements placés.'
-            : `Le département cherché était ${cible.nom}.`,
+          text: !termine
+            ? `Le département cherché était ${cible.nom}.`
+            : trouves === cibles.length
+              ? 'Tous les départements placés.'
+              : `${passes} département${passes > 1 ? 's' : ''} passé${passes > 1 ? 's' : ''}.`,
         }),
       ]),
     );
 
     // Perdu : on montre enfin où il était. C'est le seul moment où la bonne
-    // réponse apparaît en vert.
-    if (!gagne) {
+    // réponse apparaît en vert sans avoir été trouvée.
+    if (!termine) {
       slot.appendChild(
         el('div', { class: 'carte-slot' }, [
-          cartePlacementDepartements({ geo, regionCode: cible.regionCode, correctCode: cible.code }),
+          cartePlacementDepartements({
+            geo,
+            regionCode: cible.regionCode,
+            correctCode: cible.code,
+            solvedCodes: trouvees,
+          }),
         ]),
       );
     }

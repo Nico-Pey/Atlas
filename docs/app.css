@@ -904,3 +904,37 @@ button {
 .defi-etape {
   font-size: 15px;
 }
+
+/* Porte de sortie, pas chemin normal : discrète, mais assez grande pour
+   être touchée sans viser. */
+.defi-passer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.defi-passer-button {
+  min-height: var(--touch-target);
+  padding: 0 var(--space-md);
+  background: none;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-button);
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.defi-passer-button:disabled {
+  opacity: 0.4;
+}
+
+.defi-passer-note {
+  font-size: 13px;
+}
+
+/* Nom (ou numéro) d'un département déjà trouvé, écrit dans sa forme. */
+.carte-etiquette {
+  font-family: inherit;
+  user-select: none;
+}
