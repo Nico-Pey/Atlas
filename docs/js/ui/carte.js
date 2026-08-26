@@ -455,6 +455,8 @@ function nearestDepartement(departements, point) {
  * @param {string | null} [options.pickedCode]   Département touché, en rouge s'il n'est pas le bon.
  * @param {string | null} [options.highlightCode]  Département désigné en jaune : sert d'énoncé
  *   ("quel est CE département ?"), pas de retour visuel.
+ * @param {Set<string> | null} [options.solvedCodes]  Départements déjà trouvés : ils restent
+ *   en vert clair, avec leur nom écrit dedans quand la place le permet (voir etiquetteDepartement).
  * @param {((code: string) => void) | null} [options.onSelect]  Absent = carte purement illustrative.
  * @returns {SVGElement}
  */
@@ -464,6 +466,7 @@ export function cartePlacementDepartements({
   correctCode = null,
   pickedCode = null,
   highlightCode = null,
+  solvedCodes = null,
   onSelect = null,
 }) {
   const region = geo.regions.find((r) => r.code === regionCode);
@@ -512,6 +515,24 @@ export function cartePlacementDepartements({
 
   if (interactive) attachDepartementTapHandler(root, departements, onSelect);
 
+  // Départements déjà trouvés : ils restent en vert clair jusqu'à la fin de
+  // la partie. Redessinés par-dessus la boucle pour que leur contour soit
+  // complet (deux voisins partagent une frontière).
+  const trouves = solvedCodes ? departements.filter((d) => solvedCodes.has(d.code)) : [];
+  for (const dep of trouves) {
+    root.appendChild(
+      svg('path', {
+        d: dep.path,
+        fill: 'var(--success)',
+        'fill-opacity': SOLVED_OPACITY,
+        stroke: 'var(--success)',
+        'stroke-width': mapHeight * BORDER_RATIO,
+        'stroke-linejoin': 'round',
+        'pointer-events': 'none',
+      }),
+    );
+  }
+
   // Le département désigné par l'énoncé, en jaune. Redessiné par-dessus tout
   // le reste pour que son contour soit complet (deux voisins partagent une
   // frontière : le dernier dessiné recouvre le trait de l'autre).
@@ -536,5 +557,105 @@ export function cartePlacementDepartements({
     strokeWidth: mapHeight * ACCENT_BORDER_RATIO,
   });
 
+  // Les étiquettes en tout dernier : un aplat de couleur posé après les
+  // recouvrirait. Les plus gros départements passent en premier — à conflit
+  // égal, c'est le petit qui cède, car c'est lui qu'on identifie le plus
+  // facilement à sa place sur la carte.
+  const occupees = [];
+  const parTaille = [...trouves].sort((a, b) => aireBbox(b.bbox) - aireBbox(a.bbox));
+  for (const dep of parTaille) {
+    const etiquette = etiquetteDepartement(dep, mapHeight, occupees);
+    if (!etiquette) continue;
+    occupees.push(etiquette.boite);
+    root.appendChild(etiquette.node);
+  }
+
   return root;
+}
+
+/** Opacité du vert « déjà trouvé » : présent, mais qui laisse lire l'étiquette. */
+const SOLVED_OPACITY = 0.22;
+/** Taille du texte d'une étiquette, en fraction de la hauteur de la carte. */
+const LABEL_RATIO = 0.031;
+/** Largeur moyenne d'un caractère, en fraction de la taille du texte. */
+const CHAR_WIDTH_RATIO = 0.52;
+/** Marge exigée autour du texte : on n'écrit que s'il reste un peu d'air. */
+const LABEL_FIT = 0.9;
+
+/** Espace laissé entre deux étiquettes voisines, en fraction de leur taille. */
+const LABEL_GAP = 0.2;
+
+function aireBbox([minX, minY, maxX, maxY]) {
+  return (maxX - minX) * (maxY - minY);
+}
+
+/** Deux boîtes [minX, minY, maxX, maxY] se chevauchent-elles ? */
+function seChevauchent(a, b) {
+  return a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+}
+
+/**
+ * Étiquette d'un département déjà trouvé — le compromis entre « écrire le
+ * nom » et « ne rien déborder ».
+ *
+ * Trois cas, dans cet ordre : le **nom complet** s'il tient dans la forme et
+ * ne touche aucune étiquette déjà posée ; sinon le **numéro**, deux
+ * caractères qui passent presque partout ; sinon **rien**, le vert clair
+ * disant déjà « trouvé ».
+ *
+ * Le test de chevauchement n'est pas une précaution théorique : en
+ * Île-de-France, la boîte englobante des Hauts-de-Seine enveloppe Paris, donc
+ * leurs deux centres sont quasiment au même endroit et les étiquettes se
+ * marchaient dessus. Tenir dans sa propre forme ne suffit donc pas — il faut
+ * aussi ne pas empiéter sur le voisin.
+ *
+ * La largeur du texte est estimée (nombre de caractères × largeur moyenne)
+ * plutôt que mesurée : mesurer demanderait d'insérer le texte dans le
+ * document pour lire sa boîte, donc de dessiner puis d'effacer. L'estimation
+ * suffit largement pour arbitrer entre trois options.
+ *
+ * @param {import('../data/geo.js').DepartementGeo} dep
+ * @param {number} mapHeight Hauteur du viewBox, en unités de projection.
+ * @param {number[][]} occupees Boîtes des étiquettes déjà posées.
+ * @returns {{node: SVGElement, boite: number[]} | null}
+ */
+function etiquetteDepartement(dep, mapHeight, occupees) {
+  const [minX, minY, maxX, maxY] = dep.bbox;
+  const taille = mapHeight * LABEL_RATIO;
+  if (taille > (maxY - minY) * LABEL_FIT) return null;
+
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const largeurDisponible = (maxX - minX) * LABEL_FIT;
+  const marge = taille * LABEL_GAP;
+
+  for (const texte of [dep.nom, dep.code]) {
+    const largeur = texte.length * CHAR_WIDTH_RATIO * taille;
+    if (largeur > largeurDisponible) continue;
+
+    const boite = [cx - largeur / 2, cy - taille / 2, cx + largeur / 2, cy + taille / 2];
+    const avecMarge = [boite[0] - marge, boite[1] - marge, boite[2] + marge, boite[3] + marge];
+    if (occupees.some((autre) => seChevauchent(avecMarge, autre))) continue;
+
+    return {
+      boite,
+      node: svg(
+        'text',
+        {
+          class: 'carte-etiquette',
+          x: cx,
+          y: cy,
+          'font-size': taille,
+          'font-weight': 700,
+          'text-anchor': 'middle',
+          'dominant-baseline': 'central',
+          fill: 'var(--success)',
+          'pointer-events': 'none',
+        },
+        [texte],
+      ),
+    };
+  }
+
+  return null;
 }
