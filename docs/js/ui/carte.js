@@ -22,6 +22,9 @@ import { svg } from './dom.js';
  * @param {Set<string>} options.activeRegionCodes  Régions qui ont du contenu.
  * @param {Record<string, number>} [options.progressByRegion]  Avancement par région, de 0
  *   (jamais visitée → gris) à 1 (tous ses départements connus → vert plein).
+ * @param {Set<string> | null} [options.selectedRegionCodes]  Bascule la carte en **carte de
+ *   sélection** : les régions dedans sont allumées, les autres éteintes, et l'avancement
+ *   n'est plus affiché. Sert à choisir sur quoi porte une partie (ui/defi.js).
  * @param {string | null} [options.correctCode]  Bonne réponse, en vert (retour visuel du quiz).
  * @param {string | null} [options.pickedCode]   Région touchée, en rouge si elle n'est pas la bonne.
  * @param {((regionCode: string) => void) | null} [options.onSelect]  Absent = carte non cliquable.
@@ -31,10 +34,14 @@ export function carteRegions({
   geo,
   activeRegionCodes,
   progressByRegion = {},
+  selectedRegionCodes = null,
   correctCode = null,
   pickedCode = null,
   onSelect = null,
 }) {
+  // Deux façons de colorier une région, jamais les deux à la fois : montrer
+  // l'avancement (accueil) ou montrer si elle est retenue (réglages du Défi).
+  const enSelection = selectedRegionCodes !== null;
   const interactive = typeof onSelect === 'function';
   const mapHeight = geo.viewBox.height;
 
@@ -52,24 +59,27 @@ export function carteRegions({
     // apprend. La carte de France devient ainsi une carte d'avancement, au
     // lieu d'être verte partout dès le premier lancement.
     const progress = progressByRegion[region.code] ?? 0;
-    const visited = progress > 0;
+    const retenue = enSelection ? selectedRegionCodes.has(region.code) : progress > 0;
 
     const group = svg('g', {
       class: isActive ? 'carte-region carte-region-active' : 'carte-region carte-region-inactive',
       role: interactive ? 'button' : null,
       tabindex: interactive ? '0' : null,
+      // En mode sélection, chaque région est un interrupteur : `aria-pressed`
+      // est ce qui le fait annoncer comme tel, et son état avec.
+      'aria-pressed': enSelection ? String(retenue) : null,
       'aria-label': region.nom + (isActive ? '' : ' (bientôt disponible)'),
     });
 
     group.appendChild(
       svg('path', {
         d: region.path,
-        // Fond neutre plein quand la région n'a jamais été visitée : une
-        // opacité nulle sur la couleur d'accent laisserait voir le fond de
-        // la page (même raison que pour les départements).
-        fill: visited ? 'var(--accent)' : 'var(--surface)',
-        'fill-opacity': visited ? regionFillOpacity(progress) : 1,
-        stroke: visited ? 'var(--accent)' : 'var(--separator)',
+        // Fond neutre plein quand la région n'est pas allumée : une opacité
+        // nulle sur la couleur d'accent laisserait voir le fond de la page
+        // (même raison que pour les départements).
+        fill: retenue ? 'var(--accent)' : 'var(--surface)',
+        'fill-opacity': retenue ? (enSelection ? SELECTION_OPACITY : regionFillOpacity(progress)) : 1,
+        stroke: retenue ? 'var(--accent)' : 'var(--separator)',
         'stroke-width': mapHeight * BORDER_RATIO,
         'stroke-linejoin': 'round',
       }),
@@ -105,6 +115,13 @@ export function carteRegions({
  * d'œil depuis l'accueil.
  */
 const REGION_MIN_OPACITY = 0.18;
+
+/**
+ * Opacité d'une région allumée en mode sélection. Franche, mais sous 1 : la
+ * carte de sélection ne doit pas se confondre avec celle de l'accueil, où le
+ * vert plein veut dire « région entièrement connue ».
+ */
+const SELECTION_OPACITY = 0.5;
 
 /** @param {number} progress Avancement de 0 à 1. @returns {number} */
 function regionFillOpacity(progress) {

@@ -20,7 +20,7 @@
  * continueront de servir l'ancienne version depuis leur cache.
  */
 
-const CACHE_NAME = 'atlas-v14';
+const CACHE_NAME = 'atlas-v15';
 
 /** Chemins relatifs : fonctionne aussi bien à la racine que dans /Atlas/. */
 const ASSETS = [
