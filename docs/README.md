@@ -8,7 +8,7 @@ Safari, et fonctionne sans connexion.
 **Pourquoi c'est la meilleure option ici** : tu développes sous Windows, sans
 Mac, sans compte développeur Apple, sans expiration au bout de 7 jours. Et
 contrairement aux deux autres versions, **celle-ci a réellement été testée** :
-12 tests du moteur + 176 vérifications dans un navigateur
+12 tests du moteur + 198 vérifications dans un navigateur
 simulant un iPhone (navigation, enregistrement de la progression, règles SRS,
 vraies frontières régions/départements, quiz, mise en cache progressive,
 service worker).
@@ -86,13 +86,18 @@ d'autant que le tap est rattrapé vers le département le plus proche (§ 4).
 **L'onglet Défi** est un jeu libre, à côté de la révision : on donne un nom de
 département, il faut le placer sur la carte — sa région d'abord, puis le
 département à l'intérieur. Bien placé, on passe au suivant ; mal placé, on perd
-une vie et on recommence le même. Deux réglages avant de lancer : **3, 2 ou une
-infinité de vies**, et **10, 20 ou les 96 départements**.
+une vie et on recommence le même. Trois réglages avant de lancer : **3, 2 ou une
+infinité de vies**, **10, 20 ou tous les départements**, et surtout **sur
+quelles régions on joue** — une carte de France où toutes les régions sont
+allumées au départ ; toucher l'une d'elles l'éteint, et on ne sera plus
+interrogé sur ses départements. De quoi s'entraîner sur ce qu'on a déjà appris
+sans être envoyé à l'autre bout du pays.
 
 Le Défi pioche dans les 96 départements, pas seulement ceux vus en leçon — et
 il **n'écrit rien dans la progression** : c'est le Quiz, et lui seul, qui fait
-avancer la répétition espacée. La bonne réponse n'est montrée qu'à la fin de la
-partie : la révéler après une erreur offrirait le deuxième essai.
+avancer la répétition espacée. La forme touchée passe au **vert** si elle est juste, au **rouge** sinon ; dans
+ce dernier cas la bonne réponse n'est pas révélée — on ne la voit qu'à la fin
+de la partie, sans quoi le deuxième essai serait offert.
 
 Aucune étape de compilation : ce sont des fichiers HTML/CSS/JS lus directement
 par le navigateur. Tu peux modifier un fichier et recharger, c'est tout.

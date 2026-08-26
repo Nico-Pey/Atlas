@@ -756,6 +756,12 @@ button {
 
 /* ---------- Défi ---------- */
 
+.defi-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
 .defi-reglage {
   display: flex;
   flex-direction: column;
@@ -767,6 +773,33 @@ button {
   font-weight: 600;
   color: var(--text-muted);
   margin: 0;
+}
+
+.defi-reglage-entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.defi-tout-button {
+  min-height: var(--touch-target);
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Plus petite que les cartes de jeu : ici elle cohabite avec deux autres
+   réglages et un bouton, tout doit tenir sans faire défiler trois écrans. */
+.defi-carte-selection .carte {
+  height: min(32vh, 260px);
+}
+
+.defi-regions-compte {
+  font-size: 15px;
 }
 
 .defi-options {
@@ -801,6 +834,10 @@ button {
   color: #ffffff;
   font-size: 17px;
   font-weight: 600;
+}
+
+.defi-start-button:disabled {
+  opacity: 0.4;
 }
 
 .defi-retour-button {
